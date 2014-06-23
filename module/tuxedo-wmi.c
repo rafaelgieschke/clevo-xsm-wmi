@@ -993,6 +993,43 @@ static ssize_t tuxedo_state_store(struct device *child,
 static DEVICE_ATTR(tuxedo_state, 0644,
 	tuxedo_state_show, tuxedo_state_store);
 
+static ssize_t tuxedo_mode_show(struct device *child,
+	struct device_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", kb_backlight.mode);
+}
+
+static ssize_t tuxedo_mode_store(struct device *child,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	static enum kb_mode modes[] = {
+		KB_MODE_RANDOM_COLOR,
+		KB_MODE_CUSTOM,
+		KB_MODE_BREATHE,
+		KB_MODE_CYCLE,
+		KB_MODE_WAVE,
+		KB_MODE_DANCE,
+		KB_MODE_TEMPO,
+		KB_MODE_FLASH,
+	};
+
+	unsigned int val;
+	int ret;
+	unsigned int i;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	i = clamp_t(unsigned, val, 0, 7);
+	kb_backlight.ops->set_mode(modes[i]);
+
+	return ret ? : size;
+}
+
+static DEVICE_ATTR(tuxedo_mode, 0644,
+	tuxedo_mode_show, tuxedo_mode_store);
+
 /* dmi & init & exit */
 
 static int __init tuxedo_dmi_matched(const struct dmi_system_id *id)
@@ -1107,6 +1144,10 @@ static int __init tuxedo_init(void)
 		&dev_attr_tuxedo_state) != 0)
 		TUXEDO_ERROR("Sysfs attribute creation failed for state\n");
 
+	if (device_create_file(&tuxedo_platform_device->dev,
+		&dev_attr_tuxedo_mode) != 0)
+		TUXEDO_ERROR("Sysfs attribute creation failed for mode\n");
+
 	return 0;
 }
 
@@ -1118,6 +1159,7 @@ static void __exit tuxedo_exit(void)
 
 	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_brightness);
 	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_state);
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_mode);
 
 	platform_device_unregister(tuxedo_platform_device);
 	platform_driver_unregister(&tuxedo_platform_driver);
