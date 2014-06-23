@@ -948,6 +948,7 @@ static ssize_t tuxedo_brightness_show(struct device *child,
 {
     return sprintf(buf, "%d\n", kb_backlight.brightness);
 }
+
 static ssize_t tuxedo_brightness_store(struct device *child,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
@@ -960,11 +961,37 @@ static ssize_t tuxedo_brightness_store(struct device *child,
 
 	kb_backlight.ops->set_brightness(val);
 
-	return 1;
+	return ret ? : size;
 }
+
 static DEVICE_ATTR(tuxedo_brightness, 0644,
 	tuxedo_brightness_show, tuxedo_brightness_store);
 
+static ssize_t tuxedo_state_show(struct device *child,
+	struct device_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", kb_backlight.state);
+}
+
+static ssize_t tuxedo_state_store(struct device *child,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int val;
+	int ret;
+	unsigned int i;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	i = clamp_t(unsigned, val, 0, 1);
+	kb_backlight.ops->set_state(i);
+
+	return ret ? : size;
+}
+
+static DEVICE_ATTR(tuxedo_state, 0644,
+	tuxedo_state_show, tuxedo_state_store);
 
 /* dmi & init & exit */
 
@@ -1074,7 +1101,11 @@ static int __init tuxedo_init(void)
 
 	if (device_create_file(&tuxedo_platform_device->dev,
 		&dev_attr_tuxedo_brightness) != 0)
-		TUXEDO_ERROR("Sysfs Attribute Creation failed for brightness\n");
+		TUXEDO_ERROR("Sysfs attribute creation failed for brightness\n");
+
+	if (device_create_file(&tuxedo_platform_device->dev,
+		&dev_attr_tuxedo_state) != 0)
+		TUXEDO_ERROR("Sysfs attribute creation failed for state\n");
 
 	return 0;
 }
@@ -1086,6 +1117,7 @@ static void __exit tuxedo_exit(void)
 	tuxedo_rfkill_exit();
 
 	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_brightness);
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_state);
 
 	platform_device_unregister(tuxedo_platform_device);
 	platform_driver_unregister(&tuxedo_platform_driver);
