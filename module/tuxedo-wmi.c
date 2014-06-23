@@ -630,7 +630,7 @@ static void kb_8_color__set_mode(unsigned mode)
 	BUG_ON(mode >= ARRAY_SIZE(cmds));
 
 	tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, 0x20000000, NULL);
-	
+
 	if (mode == KB_MODE_CUSTOM){
 		kb_8_color__set_color(kb_backlight.color.left,
 		                      kb_backlight.color.center,
@@ -675,7 +675,7 @@ static void kb_8_color__init(void)
 
 	kb_backlight.brightness = param_kb_brightness;
 	kb_backlight.mode       = KB_MODE_CUSTOM;
-	
+
 	if (!param_kb_off) {
 		kb_8_color__set_color(kb_backlight.color.left,
 		                      kb_backlight.color.center,
@@ -941,6 +941,33 @@ static void __exit tuxedo_rfkill_exit(void)
 }
 
 
+/* Sysfs interface */
+
+static ssize_t tuxedo_brightness_show(struct device *child,
+	struct device_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", kb_backlight.brightness);
+}
+static ssize_t tuxedo_brightness_store(struct device *child,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int val;
+	int ret;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	kb_backlight.ops->set_brightness(val);
+
+	return 1;
+}
+static DEVICE_ATTR(tuxedo_brightness, 0644,
+	tuxedo_brightness_show, tuxedo_brightness_store);
+
+
+/* dmi & init & exit */
+
 static int __init tuxedo_dmi_matched(const struct dmi_system_id *id)
 {
 	TUXEDO_INFO("Model %s found\n", id->ident);
@@ -1045,6 +1072,10 @@ static int __init tuxedo_init(void)
 	if (unlikely(err))
 		TUXEDO_ERROR("Could not register LED device\n");
 
+	if (device_create_file(&tuxedo_platform_device->dev,
+		&dev_attr_tuxedo_brightness) != 0)
+		TUXEDO_ERROR("Sysfs Attribute Creation failed for brightness\n");
+
 	return 0;
 }
 
@@ -1053,6 +1084,8 @@ static void __exit tuxedo_exit(void)
 	tuxedo_led_exit();
 	tuxedo_input_exit();
 	tuxedo_rfkill_exit();
+
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_brightness);
 
 	platform_device_unregister(tuxedo_platform_device);
 	platform_driver_unregister(&tuxedo_platform_driver);
