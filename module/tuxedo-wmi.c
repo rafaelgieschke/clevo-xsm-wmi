@@ -978,14 +978,13 @@ static ssize_t tuxedo_state_store(struct device *child,
 {
 	unsigned int val;
 	int ret;
-	unsigned int i;
 
 	ret = kstrtouint(buf, 0, &val);
 	if (ret)
 		return ret;
 
-	i = clamp_t(unsigned, val, 0, 1);
-	kb_backlight.ops->set_state(i);
+	val = clamp_t(unsigned, val, 0, 1);
+	kb_backlight.ops->set_state(val);
 
 	return ret ? : size;
 }
@@ -1015,20 +1014,61 @@ static ssize_t tuxedo_mode_store(struct device *child,
 
 	unsigned int val;
 	int ret;
-	unsigned int i;
 
 	ret = kstrtouint(buf, 0, &val);
 	if (ret)
 		return ret;
 
-	i = clamp_t(unsigned, val, 0, 7);
-	kb_backlight.ops->set_mode(modes[i]);
+	val = clamp_t(unsigned, val, 0, 7);
+	kb_backlight.ops->set_mode(modes[val]);
 
 	return ret ? : size;
 }
 
 static DEVICE_ATTR(tuxedo_mode, 0644,
 	tuxedo_mode_show, tuxedo_mode_store);
+
+static ssize_t tuxedo_color_show(struct device *child,
+	struct device_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d %d %d\n", kb_backlight.color.left,
+    	kb_backlight.color.center, kb_backlight.color.right);
+}
+
+static ssize_t tuxedo_color_store(struct device *child,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int i[3];
+	unsigned int val;
+	int ret, j;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	val = clamp_t(unsigned, val, 0, 777);
+
+	if(val >= 100) {
+		for(j = 2; j >= 0; j--){
+			i[j] = val % 10;
+			val /= 10;
+		}
+	}
+	else if(val >= 10 && val <= 99)
+		i[0] = i[1] = i[2] = val /= 10;
+	else
+		i[0] = i[1] = i[2] = val;
+
+	i[0] = clamp_t(unsigned, i[0], 0, 7);
+	i[1] = clamp_t(unsigned, i[1], 0, 7);
+	i[2] = clamp_t(unsigned, i[2], 0, 7);
+
+	kb_backlight.ops->set_color(i[0], i[1], i[2]);
+
+	return ret ? : size;
+}
+static DEVICE_ATTR(tuxedo_color, 0644,
+	tuxedo_color_show, tuxedo_color_store);
 
 /* dmi & init & exit */
 
@@ -1148,6 +1188,10 @@ static int __init tuxedo_init(void)
 		&dev_attr_tuxedo_mode) != 0)
 		TUXEDO_ERROR("Sysfs attribute creation failed for mode\n");
 
+	if (device_create_file(&tuxedo_platform_device->dev,
+		&dev_attr_tuxedo_color) != 0)
+		TUXEDO_ERROR("Sysfs attribute creation failed for color\n");
+
 	return 0;
 }
 
@@ -1160,6 +1204,7 @@ static void __exit tuxedo_exit(void)
 	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_brightness);
 	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_state);
 	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_mode);
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_color);
 
 	platform_device_unregister(tuxedo_platform_device);
 	platform_driver_unregister(&tuxedo_platform_driver);
