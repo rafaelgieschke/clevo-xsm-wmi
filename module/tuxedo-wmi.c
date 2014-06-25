@@ -1031,41 +1031,53 @@ static DEVICE_ATTR(kb_mode, 0644,
 static ssize_t tuxedo_color_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
-    return sprintf(buf, "%d %d %d\n", kb_backlight.color.left,
-    	kb_backlight.color.center, kb_backlight.color.right);
+    return sprintf(buf, "%s %s %s\n", kb_colors[kb_backlight.color.left].name,
+    	kb_colors[kb_backlight.color.center].name,
+    	kb_colors[kb_backlight.color.right].name);
 }
 
 static ssize_t tuxedo_color_store(struct device *child,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
-	unsigned int i[3];
-	unsigned int val;
-	int ret, j;
+	unsigned int i, j;
+	unsigned int val[3] = {0};
+	char left[8];
+	char right[8];
+	char center[8];
 
-	ret = kstrtouint(buf, 0, &val);
-	if (ret)
-		return ret;
+	i = sscanf(buf, "%7s %7s %7s", left, center, right);
 
-	val = clamp_t(unsigned, val, 0, 777);
-
-	if(val >= 100) {
-		for(j = 2; j >= 0; j--){
-			i[j] = val % 10;
-			val /= 10;
+	if(i == 1) {
+		for (j = 0; j < ARRAY_SIZE(kb_colors); j++) {
+			if (!strcmp(left, kb_colors[j].name)) {
+				val[0] = j;
+			}
 		}
+		val[0] = clamp_t(unsigned, val[0], 0, ARRAY_SIZE(kb_colors));
+		val[2] = val[1] = val[0];
 	}
-	else if(val >= 10 && val <= 99)
-		i[0] = i[1] = i[2] = val /= 10;
+	else if(i == 3) {
+		for (j = 0; j < ARRAY_SIZE(kb_colors); j++) {
+			if (!strcmp(left, kb_colors[j].name)) {
+				val[0] = j;
+			}
+			if (!strcmp(center, kb_colors[j].name)) {
+				val[1] = j;
+			}
+			if (!strcmp(right, kb_colors[j].name)) {
+				val[2] = j;
+			}
+		}
+		val[0] = clamp_t(unsigned, val[0], 0, ARRAY_SIZE(kb_colors));
+		val[1] = clamp_t(unsigned, val[1], 0, ARRAY_SIZE(kb_colors));
+		val[2] = clamp_t(unsigned, val[2], 0, ARRAY_SIZE(kb_colors));
+	}
 	else
-		i[0] = i[1] = i[2] = val;
+		return -EINVAL;
 
-	i[0] = clamp_t(unsigned, i[0], 0, 7);
-	i[1] = clamp_t(unsigned, i[1], 0, 7);
-	i[2] = clamp_t(unsigned, i[2], 0, 7);
+	kb_backlight.ops->set_color(val[0], val[1], val[2]);
 
-	kb_backlight.ops->set_color(i[0], i[1], i[2]);
-
-	return ret ? : size;
+	return size;
 }
 static DEVICE_ATTR(kb_color, 0644,
 	tuxedo_color_show, tuxedo_color_store);
