@@ -946,7 +946,7 @@ static void __exit tuxedo_rfkill_exit(void)
 static ssize_t tuxedo_brightness_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
-    return sprintf(buf, "%d\n", kb_backlight.brightness);
+	return sprintf(buf, "%d\n", kb_backlight.brightness);
 }
 
 static ssize_t tuxedo_brightness_store(struct device *child,
@@ -970,7 +970,7 @@ static DEVICE_ATTR(kb_brightness, 0644,
 static ssize_t tuxedo_state_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
-    return sprintf(buf, "%d\n", kb_backlight.state);
+	return sprintf(buf, "%d\n", kb_backlight.state);
 }
 
 static ssize_t tuxedo_state_store(struct device *child,
@@ -995,7 +995,7 @@ static DEVICE_ATTR(kb_state, 0644,
 static ssize_t tuxedo_mode_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
-    return sprintf(buf, "%d\n", kb_backlight.mode);
+	return sprintf(buf, "%d\n", kb_backlight.mode);
 }
 
 static ssize_t tuxedo_mode_store(struct device *child,
@@ -1032,8 +1032,8 @@ static ssize_t tuxedo_color_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
     return sprintf(buf, "%s %s %s\n", kb_colors[kb_backlight.color.left].name,
-    	kb_colors[kb_backlight.color.center].name,
-    	kb_colors[kb_backlight.color.right].name);
+		kb_colors[kb_backlight.color.center].name,
+		kb_colors[kb_backlight.color.right].name);
 }
 
 static ssize_t tuxedo_color_store(struct device *child,
@@ -1047,32 +1047,26 @@ static ssize_t tuxedo_color_store(struct device *child,
 
 	i = sscanf(buf, "%7s %7s %7s", left, center, right);
 
-	if(i == 1) {
+	if (i == 1) {
 		for (j = 0; j < ARRAY_SIZE(kb_colors); j++) {
-			if (!strcmp(left, kb_colors[j].name)) {
+			if (!strcmp(left, kb_colors[j].name))
 				val[0] = j;
-			}
 		}
 		val[0] = clamp_t(unsigned, val[0], 0, ARRAY_SIZE(kb_colors));
 		val[2] = val[1] = val[0];
-	}
-	else if(i == 3) {
+	} else if (i == 3) {
 		for (j = 0; j < ARRAY_SIZE(kb_colors); j++) {
-			if (!strcmp(left, kb_colors[j].name)) {
+			if (!strcmp(left, kb_colors[j].name))
 				val[0] = j;
-			}
-			if (!strcmp(center, kb_colors[j].name)) {
+			if (!strcmp(center, kb_colors[j].name))
 				val[1] = j;
-			}
-			if (!strcmp(right, kb_colors[j].name)) {
+			if (!strcmp(right, kb_colors[j].name))
 				val[2] = j;
-			}
 		}
 		val[0] = clamp_t(unsigned, val[0], 0, ARRAY_SIZE(kb_colors));
 		val[1] = clamp_t(unsigned, val[1], 0, ARRAY_SIZE(kb_colors));
 		val[2] = clamp_t(unsigned, val[2], 0, ARRAY_SIZE(kb_colors));
-	}
-	else
+	} else
 		return -EINVAL;
 
 	kb_backlight.ops->set_color(val[0], val[1], val[2]);
