@@ -964,7 +964,7 @@ static ssize_t tuxedo_brightness_store(struct device *child,
 	return ret ? : size;
 }
 
-static DEVICE_ATTR(tuxedo_brightness, 0644,
+static DEVICE_ATTR(kb_brightness, 0644,
 	tuxedo_brightness_show, tuxedo_brightness_store);
 
 static ssize_t tuxedo_state_show(struct device *child,
@@ -989,7 +989,7 @@ static ssize_t tuxedo_state_store(struct device *child,
 	return ret ? : size;
 }
 
-static DEVICE_ATTR(tuxedo_state, 0644,
+static DEVICE_ATTR(kb_state, 0644,
 	tuxedo_state_show, tuxedo_state_store);
 
 static ssize_t tuxedo_mode_show(struct device *child,
@@ -1025,7 +1025,7 @@ static ssize_t tuxedo_mode_store(struct device *child,
 	return ret ? : size;
 }
 
-static DEVICE_ATTR(tuxedo_mode, 0644,
+static DEVICE_ATTR(kb_mode, 0644,
 	tuxedo_mode_show, tuxedo_mode_store);
 
 static ssize_t tuxedo_color_show(struct device *child,
@@ -1067,7 +1067,7 @@ static ssize_t tuxedo_color_store(struct device *child,
 
 	return ret ? : size;
 }
-static DEVICE_ATTR(tuxedo_color, 0644,
+static DEVICE_ATTR(kb_color, 0644,
 	tuxedo_color_show, tuxedo_color_store);
 
 /* dmi & init & exit */
@@ -1177,19 +1177,19 @@ static int __init tuxedo_init(void)
 		TUXEDO_ERROR("Could not register LED device\n");
 
 	if (device_create_file(&tuxedo_platform_device->dev,
-		&dev_attr_tuxedo_brightness) != 0)
+		&dev_attr_kb_brightness) != 0)
 		TUXEDO_ERROR("Sysfs attribute creation failed for brightness\n");
 
 	if (device_create_file(&tuxedo_platform_device->dev,
-		&dev_attr_tuxedo_state) != 0)
+		&dev_attr_kb_state) != 0)
 		TUXEDO_ERROR("Sysfs attribute creation failed for state\n");
 
 	if (device_create_file(&tuxedo_platform_device->dev,
-		&dev_attr_tuxedo_mode) != 0)
+		&dev_attr_kb_mode) != 0)
 		TUXEDO_ERROR("Sysfs attribute creation failed for mode\n");
 
 	if (device_create_file(&tuxedo_platform_device->dev,
-		&dev_attr_tuxedo_color) != 0)
+		&dev_attr_kb_color) != 0)
 		TUXEDO_ERROR("Sysfs attribute creation failed for color\n");
 
 	return 0;
@@ -1201,10 +1201,10 @@ static void __exit tuxedo_exit(void)
 	tuxedo_input_exit();
 	tuxedo_rfkill_exit();
 
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_brightness);
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_state);
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_mode);
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_tuxedo_color);
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_brightness);
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_state);
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_mode);
+	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_color);
 
 	platform_device_unregister(tuxedo_platform_device);
 	platform_driver_unregister(&tuxedo_platform_driver);
