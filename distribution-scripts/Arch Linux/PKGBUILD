@@ -1,4 +1,4 @@
-# Author: Arnoud Willemsen <mail@lynthium.com>
+# Maintainer: Arnoud Willemsen <mail@lynthium.com>
 
 pkgname=('clevo-xsm-wmi-module'
          'clevo-xsm-wmi-utility')
@@ -9,6 +9,7 @@ pkgdesc='A reverse engineering driver for the Clevo SM series backlight keyboard
 arch=('i686' 'x86_64')
 license=('GPL')
 url='https://bitbucket.org/lynthium/clevo-xsm-wmi'
+depends=('qt5-base')
 makedepends=('linux-headers')
 source=("clevo-xsm-wmi-${pkgver}.src.tar.gz::https://bitbucket.org/lynthium/clevo-xsm-wmi/get/v${pkgver}.tar.gz")
 install='clevo-xsm-wmi.install'
@@ -42,11 +43,15 @@ package_clevo-xsm-wmi-module() {
             fi
         done
     done
+
+    install -D -m644 /usr/share/licenses/common/GPL2/license.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
 
 package_clevo-xsm-wmi-utility() {
     cd "${srcdir}/lynthium-clevo-xsm-wmi-${_pkgtag}/utility"
 
     install -Dm755 clevo-xsm-wmi $pkgdir/usr/sbin/clevo-xsm-wmi
+
+    install -D -m644 /usr/share/licenses/common/GPL2/license.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
 md5sums=('122fec095223aff68cb9a01e746d578d')
