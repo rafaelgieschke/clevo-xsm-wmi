@@ -1,16 +1,18 @@
-# Tuxedo-wmi
+# Clevo-xSM-wmi
 
-Kernel module for keyboard backlighting of Clevo notebooks.
-Created by Christoph Jaeger.
+Kernel module for keyboard backlighting of Clevo SM series notebooks.
+
+Based upon tuxedo-wmi, created by Christoph Jaeger.
 http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
 
-### Additions / Todo
+### Additions over tuxedo-wmi
 * Sysfs interface to control the brightness, mode, colour,
   on/off state after the module has loaded.
-  In the original code you can only set this before the module loads.
-* Small application to visually control this using the sysfs (ala roccat tools).
+  In the original code you can only set these before the module loads.
+* Small application to visually control the keyboard lighting using the sysfs
+  interface.
 
-### Licence
+### License
 This program is free software;  you can redistribute it and/or modify
 it under the terms of the  GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or (at

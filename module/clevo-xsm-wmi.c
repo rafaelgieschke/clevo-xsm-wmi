@@ -1,6 +1,9 @@
 /*
- * tuxedo-wmi.c
+ * clevo-xsm-wmi.c
  *
+ * Copyright (C) 2014 Arnoud Willemsen <mail@lynthium.com>
+ *
+ * Based on tuxedo-wmi by Christoph Jaeger
  * Copyright (C) 2013-2014 Christoph Jaeger <christophjaeger@linux.com>
  *
  * This program is free software;  you can redistribute it and/or modify
@@ -32,13 +35,19 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 
-#define TUXEDO_DRIVER_NAME KBUILD_MODNAME
+MODULE_AUTHOR("Arnoud Willemsen <mail@lynthium.com>");
+MODULE_DESCRIPTION("Clevo SM series laptop driver.");
+MODULE_LICENSE("GPL");
+MODULE_VERSION("0.0.1");
 
-#define __TUXEDO_PR(lvl, fmt, ...) \
-	do { pr_##lvl(TUXEDO_DRIVER_NAME ": " fmt, ##__VA_ARGS__); } while (0)
-#define TUXEDO_INFO(fmt, ...) __TUXEDO_PR(info, fmt, ##__VA_ARGS__)
-#define TUXEDO_ERROR(fmt, ...) __TUXEDO_PR(err, fmt, ##__VA_ARGS__)
-#define TUXEDO_DEBUG(fmt, ...) __TUXEDO_PR(debug, "[%s:%u] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define CLEVO_XSM_DRIVER_NAME KBUILD_MODNAME
+
+#define __CLEVO_XSM_PR(lvl, fmt, ...) \
+	do { pr_##lvl(CLEVO_XSM_DRIVER_NAME ": " fmt, ##__VA_ARGS__); } while (0)
+#define CLEVO_XSM_INFO(fmt, ...) __CLEVO_XSM_PR(info, fmt, ##__VA_ARGS__)
+#define CLEVO_XSM_ERROR(fmt, ...) __CLEVO_XSM_PR(err, fmt, ##__VA_ARGS__)
+#define CLEVO_XSM_DEBUG(fmt, ...) __CLEVO_XSM_PR(debug, "[%s:%u] " fmt, \
+	__func__, __LINE__, ##__VA_ARGS__)
 
 #define CLEVO_EVENT_GUID  "ABBC0F6B-8EA1-11D1-00A0-C90629100000"
 #define CLEVO_EMAIL_GUID  "ABBC0F6C-8EA1-11D1-00A0-C90629100000"
@@ -54,9 +63,9 @@
 #define TALK_BIOS_3G            0x78  /* 120 */
 
 #define COLORS { C(black,  0x000000), C(blue,    0x0000FF), \
-                 C(red,    0xFF0000), C(magenta, 0xFF00FF), \
-                 C(green,  0x00FF00), C(cyan,    0x00FFFF), \
-                 C(yellow, 0xFFFF00), C(white,   0xFFFFFF), }
+				 C(red,    0xFF0000), C(magenta, 0xFF00FF), \
+				 C(green,  0x00FF00), C(cyan,    0x00FFFF), \
+				 C(yellow, 0xFFFF00), C(white,   0xFFFFFF), }
 #undef C
 
 #define C(n, v) KB_COLOR_##n
@@ -115,11 +124,12 @@ static enum kb_color param_kb_color[3] = { [0 ... 2] = KB_COLOR_DEFAULT };
 static int param_kb_color_num = 3;
 #define param_check_kb_color(name, p) __param_check(name, p, enum kb_color)
 module_param_array_named(kb_color, param_kb_color, kb_color,
-                         &param_kb_color_num, S_IRUSR);
+						 &param_kb_color_num, S_IRUSR);
 MODULE_PARM_DESC(kb_color, "Set the color(s) of the keyboard (sections)");
 
 
-static int param_set_kb_brightness(const char *val, const struct kernel_param *kp)
+static int param_set_kb_brightness(const char *val,
+	const struct kernel_param *kp)
 {
 	int ret;
 
@@ -170,8 +180,9 @@ static int param_set_poll_freq(const char *val, const struct kernel_param *kp)
 	ret = param_set_byte(val, kp);
 
 	if (!ret)
-		*((unsigned char *) kp->arg) = clamp_t(unsigned char, *((unsigned char *) kp->arg),
-		                                       POLL_FREQ_MIN, POLL_FREQ_MAX);
+		*((unsigned char *) kp->arg) = clamp_t(unsigned char,
+											   *((unsigned char *) kp->arg),
+											   POLL_FREQ_MIN, POLL_FREQ_MAX);
 
 	return ret;
 }
@@ -199,33 +210,33 @@ module_param_named(poll_freq, param_poll_freq, poll_freq, S_IRUSR);
 MODULE_PARM_DESC(poll_freq, "Set polling frequency");
 
 
-struct platform_device *tuxedo_platform_device;
+struct platform_device *clevo_xsm_platform_device;
 
 /* input sub-driver */
 
-static struct input_dev *tuxedo_input_device;
-static DEFINE_MUTEX(tuxedo_input_report_mutex);
+static struct input_dev *clevo_xsm_input_device;
+static DEFINE_MUTEX(clevo_xsm_input_report_mutex);
 
 static unsigned int global_report_cnt = 0;
 
-/* call with tuxedo_input_report_mutex held */
-static void tuxedo_input_report_key(unsigned int code)
+/* call with clevo_xsm_input_report_mutex held */
+static void clevo_xsm_input_report_key(unsigned int code)
 {
-	input_report_key(tuxedo_input_device, code, 1);
-	input_report_key(tuxedo_input_device, code, 0);
-	input_sync(tuxedo_input_device);
+	input_report_key(clevo_xsm_input_device, code, 1);
+	input_report_key(clevo_xsm_input_device, code, 0);
+	input_sync(clevo_xsm_input_device);
 
 	global_report_cnt++;
 }
 
-static struct task_struct *tuxedo_input_polling_task;
+static struct task_struct *clevo_xsm_input_polling_task;
 
-static int tuxedo_input_polling_thread(void *data)
+static int clevo_xsm_input_polling_thread(void *data)
 {
 	unsigned int report_cnt = 0;
 
-	TUXEDO_INFO("Polling thread started (PID: %i), polling at %i Hz\n",
-	            current->pid, param_poll_freq);
+	CLEVO_XSM_INFO("Polling thread started (PID: %i), polling at %i Hz\n",
+				current->pid, param_poll_freq);
 
 	while (!kthread_should_stop()) {
 
@@ -235,132 +246,133 @@ static int tuxedo_input_polling_thread(void *data)
 		if (byte & 0x40) {
 			ec_write(0xDB, byte & ~0x40);
 
-			TUXEDO_DEBUG("Airplane-Mode Hotkey pressed\n");
+			CLEVO_XSM_DEBUG("Airplane-Mode Hotkey pressed\n");
 
-			mutex_lock(&tuxedo_input_report_mutex);
+			mutex_lock(&clevo_xsm_input_report_mutex);
 
 			if (global_report_cnt > report_cnt) {
-				mutex_unlock(&tuxedo_input_report_mutex);
+				mutex_unlock(&clevo_xsm_input_report_mutex);
 				break;
 			}
 
-			tuxedo_input_report_key(KEY_RFKILL);
+			clevo_xsm_input_report_key(KEY_RFKILL);
 			report_cnt++;
 
-			mutex_unlock(&tuxedo_input_report_mutex);
+			mutex_unlock(&clevo_xsm_input_report_mutex);
 		}
 		msleep(1000 / param_poll_freq);
 	}
 
-	TUXEDO_INFO("Polling thread exiting\n");
+	CLEVO_XSM_INFO("Polling thread exiting\n");
 
 	return 0;
 }
 
-static int tuxedo_input_open(struct input_dev *dev)
+static int clevo_xsm_input_open(struct input_dev *dev)
 {
-	tuxedo_input_polling_task = kthread_run(tuxedo_input_polling_thread,
-	                                       NULL, "tuxedo-polld");
+	clevo_xsm_input_polling_task = kthread_run(clevo_xsm_input_polling_thread,
+										   NULL, "clevo_xsm-polld");
 
-	if (unlikely(IS_ERR(tuxedo_input_polling_task))) {
-		tuxedo_input_polling_task = NULL;
-		TUXEDO_ERROR("Could not create polling thread\n");
-                return PTR_ERR(tuxedo_input_polling_task);
+	if (unlikely(IS_ERR(clevo_xsm_input_polling_task))) {
+		clevo_xsm_input_polling_task = NULL;
+		CLEVO_XSM_ERROR("Could not create polling thread\n");
+				return PTR_ERR(clevo_xsm_input_polling_task);
 	}
 
-        return 0;
+		return 0;
 }
 
-static void tuxedo_input_close(struct input_dev *dev)
+static void clevo_xsm_input_close(struct input_dev *dev)
 {
-	if (unlikely(IS_ERR_OR_NULL(tuxedo_input_polling_task)))
+	if (unlikely(IS_ERR_OR_NULL(clevo_xsm_input_polling_task)))
 		return;
 
-	kthread_stop(tuxedo_input_polling_task);
-	tuxedo_input_polling_task = NULL;
+	kthread_stop(clevo_xsm_input_polling_task);
+	clevo_xsm_input_polling_task = NULL;
 }
 
-static int __init tuxedo_input_init(void)
+static int __init clevo_xsm_input_init(void)
 {
 	int err;
 	u8 byte;
 
-	tuxedo_input_device = input_allocate_device();
-        if (unlikely(!tuxedo_input_device)) {
-                TUXEDO_ERROR("Error allocating input device\n");
-                return -ENOMEM;
-        }
+	clevo_xsm_input_device = input_allocate_device();
+	if (unlikely(!clevo_xsm_input_device)) {
+		CLEVO_XSM_ERROR("Error allocating input device\n");
+		return -ENOMEM;
+	}
 
-        tuxedo_input_device->name = "Clevo Airplane-Mode Hotkey";
-        tuxedo_input_device->phys = TUXEDO_DRIVER_NAME "/input0";
-        tuxedo_input_device->id.bustype = BUS_HOST;
-	tuxedo_input_device->dev.parent = &tuxedo_platform_device->dev;
+	clevo_xsm_input_device->name = "Clevo Airplane-Mode Hotkey";
+	clevo_xsm_input_device->phys = CLEVO_XSM_DRIVER_NAME "/input0";
+	clevo_xsm_input_device->id.bustype = BUS_HOST;
+	clevo_xsm_input_device->dev.parent = &clevo_xsm_platform_device->dev;
 
-	tuxedo_input_device->open  = tuxedo_input_open;
-	tuxedo_input_device->close = tuxedo_input_close;
+	clevo_xsm_input_device->open  = clevo_xsm_input_open;
+	clevo_xsm_input_device->close = clevo_xsm_input_close;
 
-	set_bit(EV_KEY, tuxedo_input_device->evbit);
-	set_bit(KEY_RFKILL, tuxedo_input_device->keybit);
+	set_bit(EV_KEY, clevo_xsm_input_device->evbit);
+	set_bit(KEY_RFKILL, clevo_xsm_input_device->keybit);
 
 	ec_read(0xDB, &byte);
 	ec_write(0xDB, byte & ~0x40);
 
-	err = input_register_device(tuxedo_input_device);
-        if (unlikely(err)) {
-                TUXEDO_ERROR("Error registering input device\n");
-                goto err_free_input_device;
-        }
+	err = input_register_device(clevo_xsm_input_device);
+	if (unlikely(err)) {
+		CLEVO_XSM_ERROR("Error registering input device\n");
+		goto err_free_input_device;
+	}
 
 	return 0;
 
 err_free_input_device:
-        input_free_device(tuxedo_input_device);
+		input_free_device(clevo_xsm_input_device);
 
-        return err;
+		return err;
 }
 
-static void __exit tuxedo_input_exit(void)
+static void __exit clevo_xsm_input_exit(void)
 {
-	if (unlikely(!tuxedo_input_device))
+	if (unlikely(!clevo_xsm_input_device))
 		return;
 
-	input_unregister_device(tuxedo_input_device);
-        tuxedo_input_device = NULL;
+	input_unregister_device(clevo_xsm_input_device);
+		clevo_xsm_input_device = NULL;
 }
 
 
-static int tuxedo_wmi_evaluate_wmbb_method(u32 method_id, u32 arg, u32 *retval)
+static int clevo_xsm_wmi_evaluate_wmbb_method(u32 method_id, u32 arg,
+	u32 *retval)
 {
 	struct acpi_buffer in  = { (acpi_size) sizeof(arg), &arg };
-        struct acpi_buffer out = { ACPI_ALLOCATE_BUFFER, NULL };
-        union acpi_object *obj;
-        acpi_status status;
+		struct acpi_buffer out = { ACPI_ALLOCATE_BUFFER, NULL };
+		union acpi_object *obj;
+		acpi_status status;
 	u32 tmp;
 
-	TUXEDO_DEBUG("%0#4x  IN : %0#6x\n", method_id, arg);
+	CLEVO_XSM_DEBUG("%0#4x  IN : %0#6x\n", method_id, arg);
 
 	status = wmi_evaluate_method(CLEVO_GET_GUID, 0x01,
-	                             method_id, &in, &out);
+								 method_id, &in, &out);
 
-        if (unlikely(ACPI_FAILURE(status)))
-		goto exit;
+	if (unlikely(ACPI_FAILURE(status)))
+	goto exit;
 
-        obj = (union acpi_object *) out.pointer;
-        if (obj && obj->type == ACPI_TYPE_INTEGER)
-                tmp = (u32) obj->integer.value;
-        else
-                tmp = 0;
+	obj = (union acpi_object *) out.pointer;
+	if (obj && obj->type == ACPI_TYPE_INTEGER)
+			tmp = (u32) obj->integer.value;
+	else
+			tmp = 0;
 
-	TUXEDO_DEBUG("%0#4x  OUT: %0#6x (IN: %0#6x)\n", method_id, tmp, arg);
+	CLEVO_XSM_DEBUG("%0#4x  OUT: %0#6x (IN: %0#6x)\n", method_id, tmp, arg);
 
-        if (likely(retval))
-                *retval = tmp;
+	if (likely(retval))
+			*retval = tmp;
 
-        kfree(obj);
+	kfree(obj);
 
 exit:
-        if (unlikely(ACPI_FAILURE(status)))
-                return -EIO;
+	if (unlikely(ACPI_FAILURE(status)))
+		return -EIO;
 
 	return 0;
 }
@@ -405,22 +417,24 @@ static struct {
 
 static void kb_dec_brightness(void)
 {
-	if (kb_backlight.state == KB_STATE_OFF || kb_backlight.mode != KB_MODE_CUSTOM)
+	if (kb_backlight.state == KB_STATE_OFF ||
+		kb_backlight.mode != KB_MODE_CUSTOM)
 		return;
 	if (kb_backlight.brightness == 0)
 		return;
 
-	TUXEDO_DEBUG();
+	CLEVO_XSM_DEBUG();
 
 	kb_backlight.ops->set_brightness(kb_backlight.brightness - 1);
 }
 
 static void kb_inc_brightness(void)
 {
-	if (kb_backlight.state == KB_STATE_OFF || kb_backlight.mode != KB_MODE_CUSTOM)
+	if (kb_backlight.state == KB_STATE_OFF ||
+		kb_backlight.mode != KB_MODE_CUSTOM)
 		return;
 
-	TUXEDO_DEBUG();
+	CLEVO_XSM_DEBUG();
 
 	kb_backlight.ops->set_brightness(kb_backlight.brightness + 1);
 }
@@ -470,7 +484,8 @@ static void kb_next_mode(void)
 
 /* full color backlight keyboard */
 
-static void kb_full_color__set_color(unsigned left, unsigned center, unsigned right)
+static void kb_full_color__set_color(unsigned left, unsigned center,
+	unsigned right)
 {
 	u32 cmd;
 
@@ -479,7 +494,7 @@ static void kb_full_color__set_color(unsigned left, unsigned center, unsigned ri
 	cmd |= kb_colors[left].value.r <<  8;
 	cmd |= kb_colors[left].value.g <<  0;
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
 		kb_backlight.color.left = left;
 
 	cmd = 0xF1000000;
@@ -487,7 +502,7 @@ static void kb_full_color__set_color(unsigned left, unsigned center, unsigned ri
 	cmd |= kb_colors[center].value.r <<  8;
 	cmd |= kb_colors[center].value.g <<  0;
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
 		kb_backlight.color.center = center;
 
 	cmd = 0xF2000000;
@@ -495,7 +510,7 @@ static void kb_full_color__set_color(unsigned left, unsigned center, unsigned ri
 	cmd |= kb_colors[right].value.r <<  8;
 	cmd |= kb_colors[right].value.g <<  0;
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
 		kb_backlight.color.right = right;
 
 	kb_backlight.mode = KB_MODE_CUSTOM;
@@ -507,7 +522,8 @@ static void kb_full_color__set_brightness(unsigned i)
 
 	i = clamp_t(unsigned, i, 0, ARRAY_SIZE(lvl_to_raw) - 1);
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, 0xF4000000 | lvl_to_raw[i], NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED,
+		0xF4000000 | lvl_to_raw[i], NULL))
 		kb_backlight.brightness = i;
 }
 
@@ -526,17 +542,17 @@ static void kb_full_color__set_mode(unsigned mode)
 
 	BUG_ON(mode >= ARRAY_SIZE(cmds));
 
-	tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, 0x10000000, NULL);
+	clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, 0x10000000, NULL);
 
 	if (mode == KB_MODE_CUSTOM) {
 		kb_full_color__set_color(kb_backlight.color.left,
-		                         kb_backlight.color.center,
-					 kb_backlight.color.right);
+								 kb_backlight.color.center,
+								 kb_backlight.color.right);
 		kb_full_color__set_brightness(kb_backlight.brightness);
 		return;
 	}
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmds[mode], NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmds[mode], NULL))
 		kb_backlight.mode = mode;
 }
 
@@ -544,7 +560,7 @@ static void kb_full_color__set_state(enum kb_state state)
 {
 	u32 cmd = 0xE0000000;
 
-	TUXEDO_DEBUG("State: %d\n", state);
+	CLEVO_XSM_DEBUG("State: %d\n", state);
 
 	switch (state) {
 	case KB_STATE_OFF:
@@ -557,16 +573,17 @@ static void kb_full_color__set_state(enum kb_state state)
 		BUG();
 	}
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
 		kb_backlight.state = state;
 }
 
 static void kb_full_color__init(void)
 {
-	TUXEDO_DEBUG();
+	CLEVO_XSM_DEBUG();
 
 	kb_full_color__set_state(param_kb_off ? KB_STATE_OFF : KB_STATE_ON);
-	kb_full_color__set_color(param_kb_color[0], param_kb_color[1], param_kb_color[2]);
+	kb_full_color__set_color(param_kb_color[0], param_kb_color[1],
+		param_kb_color[2]);
 	kb_full_color__set_brightness(param_kb_brightness);
 }
 
@@ -581,7 +598,8 @@ static struct kb_backlight_ops kb_full_color_ops = {
 
 /* 8 color backlight keyboard */
 
-static void kb_8_color__set_color(unsigned left, unsigned center, unsigned right)
+static void kb_8_color__set_color(unsigned left, unsigned center,
+	unsigned right)
 {
 	u32 cmd = 0x02010000;
 
@@ -590,7 +608,7 @@ static void kb_8_color__set_color(unsigned left, unsigned center, unsigned right
 	cmd |= center << 4;
 	cmd |= left;
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL)) {
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL)) {
 		kb_backlight.color.left   = left;
 		kb_backlight.color.center = center;
 		kb_backlight.color.right  = right;
@@ -610,7 +628,7 @@ static void kb_8_color__set_brightness(unsigned i)
 	cmd |= kb_backlight.color.center << 4;
 	cmd |= kb_backlight.color.left;
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmd, NULL))
 		kb_backlight.brightness = i;
 }
 
@@ -629,27 +647,27 @@ static void kb_8_color__set_mode(unsigned mode)
 
 	BUG_ON(mode >= ARRAY_SIZE(cmds));
 
-	tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, 0x20000000, NULL);
+	clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, 0x20000000, NULL);
 
 	if (mode == KB_MODE_CUSTOM){
 		kb_8_color__set_color(kb_backlight.color.left,
-		                      kb_backlight.color.center,
-		                      kb_backlight.color.right);
+							  kb_backlight.color.center,
+							  kb_backlight.color.right);
 		kb_8_color__set_brightness(kb_backlight.brightness);
 		return;
 	}
 
-	if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, cmds[mode], NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmds[mode], NULL))
 		kb_backlight.mode = mode;
 }
 
 static void kb_8_color__set_state(enum kb_state state)
 {
-	TUXEDO_DEBUG("State: %d\n", state);
+	CLEVO_XSM_DEBUG("State: %d\n", state);
 
 	switch (state) {
 	case KB_STATE_OFF:
-		if (!tuxedo_wmi_evaluate_wmbb_method(SET_KB_LED, 0x22010000, NULL))
+		if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, 0x22010000, NULL))
 			kb_backlight.state = state;
 		break;
 	case KB_STATE_ON:
@@ -663,7 +681,7 @@ static void kb_8_color__set_state(enum kb_state state)
 
 static void kb_8_color__init(void)
 {
-	TUXEDO_DEBUG();
+	CLEVO_XSM_DEBUG();
 
 	/* well, that's an uglymoron ... */
 
@@ -678,8 +696,8 @@ static void kb_8_color__init(void)
 
 	if (!param_kb_off) {
 		kb_8_color__set_color(kb_backlight.color.left,
-		                      kb_backlight.color.center,
-				      kb_backlight.color.right);
+							  kb_backlight.color.center,
+							  kb_backlight.color.right);
 		kb_8_color__set_brightness(kb_backlight.brightness);
 		kb_8_color__set_state(KB_STATE_ON);
 	}
@@ -694,40 +712,40 @@ static struct kb_backlight_ops kb_8_color_ops = {
 };
 
 
-static void tuxedo_wmi_notify(u32 value, void *context)
+static void clevo_xsm_wmi_notify(u32 value, void *context)
 {
 	static unsigned int report_cnt = 0;
 
 	u32 event;
 
 	if (value != 0xD0) {
-		TUXEDO_INFO("Unexpected WMI event (%0#6x)\n", value);
+		CLEVO_XSM_INFO("Unexpected WMI event (%0#6x)\n", value);
 		return;
 	}
 
-	tuxedo_wmi_evaluate_wmbb_method(GET_EVENT, 0, &event);
+	clevo_xsm_wmi_evaluate_wmbb_method(GET_EVENT, 0, &event);
 
 	switch (event) {
 	case 0xF4:
-		TUXEDO_DEBUG("Airplane-Mode Hotkey pressed\n");
+		CLEVO_XSM_DEBUG("Airplane-Mode Hotkey pressed\n");
 
-		if (tuxedo_input_polling_task) {
-			TUXEDO_INFO("Stopping polling thread\n");
-			kthread_stop(tuxedo_input_polling_task);
-			tuxedo_input_polling_task = NULL;
+		if (clevo_xsm_input_polling_task) {
+			CLEVO_XSM_INFO("Stopping polling thread\n");
+			kthread_stop(clevo_xsm_input_polling_task);
+			clevo_xsm_input_polling_task = NULL;
 		}
 
-		mutex_lock(&tuxedo_input_report_mutex);
+		mutex_lock(&clevo_xsm_input_report_mutex);
 
 		if (global_report_cnt > report_cnt) {
-			mutex_unlock(&tuxedo_input_report_mutex);
+			mutex_unlock(&clevo_xsm_input_report_mutex);
 			break;
 		}
 
-		tuxedo_input_report_key(KEY_RFKILL);
+		clevo_xsm_input_report_key(KEY_RFKILL);
 		report_cnt++;
 
-		mutex_unlock(&tuxedo_input_report_mutex);
+		mutex_unlock(&clevo_xsm_input_report_mutex);
 		break;
 	default:
 		if (!kb_backlight.ops)
@@ -751,19 +769,19 @@ static void tuxedo_wmi_notify(u32 value, void *context)
 	}
 }
 
-static int tuxedo_wmi_probe(struct platform_device *dev)
+static int clevo_xsm_wmi_probe(struct platform_device *dev)
 {
 	int status;
 
 	status = wmi_install_notify_handler(CLEVO_EVENT_GUID,
-	                                    tuxedo_wmi_notify, NULL);
+										clevo_xsm_wmi_notify, NULL);
 	if (unlikely(ACPI_FAILURE(status))) {
-		TUXEDO_ERROR("Could not register WMI notify handler (%0#6x)\n",
-		             status);
+		CLEVO_XSM_ERROR("Could not register WMI notify handler (%0#6x)\n",
+					 status);
 		return -EIO;
 	}
 
-	tuxedo_wmi_evaluate_wmbb_method(GET_AP, 0, NULL);
+	clevo_xsm_wmi_evaluate_wmbb_method(GET_AP, 0, NULL);
 
 	if (kb_backlight.ops)
 		kb_backlight.ops->init();
@@ -771,15 +789,15 @@ static int tuxedo_wmi_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int tuxedo_wmi_remove(struct platform_device *dev)
+static int clevo_xsm_wmi_remove(struct platform_device *dev)
 {
 	wmi_remove_notify_handler(CLEVO_EVENT_GUID);
 	return 0;
 }
 
-static int tuxedo_wmi_resume(struct platform_device *dev)
+static int clevo_xsm_wmi_resume(struct platform_device *dev)
 {
-	tuxedo_wmi_evaluate_wmbb_method(GET_AP, 0, NULL);
+	clevo_xsm_wmi_evaluate_wmbb_method(GET_AP, 0, NULL);
 
 	if (kb_backlight.ops && kb_backlight.state == KB_STATE_ON)
 		kb_backlight.ops->set_mode(kb_backlight.mode);
@@ -787,11 +805,11 @@ static int tuxedo_wmi_resume(struct platform_device *dev)
 	return 0;
 }
 
-static struct platform_driver tuxedo_platform_driver = {
-	.remove = tuxedo_wmi_remove,
-	.resume = tuxedo_wmi_resume,
+static struct platform_driver clevo_xsm_platform_driver = {
+	.remove = clevo_xsm_wmi_remove,
+	.resume = clevo_xsm_wmi_resume,
 	.driver = {
-		.name  = TUXEDO_DRIVER_NAME,
+		.name  = CLEVO_XSM_DRIVER_NAME,
 		.owner = THIS_MODULE,
 	},
 };
@@ -829,20 +847,20 @@ static enum led_brightness airplane_led_get(struct led_classdev *led_cdev)
 
 /* must not sleep */
 static void airplane_led_set(struct led_classdev *led_cdev,
-                             enum led_brightness value)
+							 enum led_brightness value)
 {
 	led_work.wk = value;
 	queue_work(led_workqueue, &led_work.work);
 }
 
 static struct led_classdev airplane_led = {
-	.name = "tuxedo::airplane",
+	.name = "clevo_xsm::airplane",
 	.brightness_get = airplane_led_get,
 	.brightness_set = airplane_led_set,
 	.max_brightness = 1,
 };
 
-static int __init tuxedo_led_init(void)
+static int __init clevo_xsm_led_init(void)
 {
 	int err;
 
@@ -852,7 +870,7 @@ static int __init tuxedo_led_init(void)
 
 	INIT_WORK(&led_work.work, airplane_led_update);
 
-	err = led_classdev_register(&tuxedo_platform_device->dev, &airplane_led);
+	err = led_classdev_register(&clevo_xsm_platform_device->dev, &airplane_led);
 	if (unlikely(err))
 		goto err_destroy_workqueue;
 
@@ -865,7 +883,7 @@ err_destroy_workqueue:
 	return err;
 }
 
-static void __exit tuxedo_led_exit(void)
+static void __exit clevo_xsm_led_exit(void)
 {
 	if (!IS_ERR_OR_NULL(airplane_led.dev))
 		led_classdev_unregister(&airplane_led);
@@ -880,22 +898,22 @@ static bool param_rfkill = false;
 module_param_named(rfkill, param_rfkill, bool, 0);
 MODULE_PARM_DESC(rfkill, "Enable WWAN-RFKILL capability.");
 
-static struct rfkill *tuxedo_wwan_rfkill_device;
+static struct rfkill *clevo_xsm_wwan_rfkill_device;
 
-static int tuxedo_wwan_rfkill_set_block(void *data, bool blocked)
+static int clevo_xsm_wwan_rfkill_set_block(void *data, bool blocked)
 {
-	TUXEDO_DEBUG("blocked=%i\n", blocked);
+	CLEVO_XSM_DEBUG("blocked=%i\n", blocked);
 
-	if (tuxedo_wmi_evaluate_wmbb_method(SET_3G, !blocked, NULL))
-		TUXEDO_ERROR("Setting 3G power state failed!\n");
+	if (clevo_xsm_wmi_evaluate_wmbb_method(SET_3G, !blocked, NULL))
+		CLEVO_XSM_ERROR("Setting 3G power state failed!\n");
 	return 0;
 }
 
-static const struct rfkill_ops tuxedo_wwan_rfkill_ops = {
-	.set_block = tuxedo_wwan_rfkill_set_block,
+static const struct rfkill_ops clevo_xsm_wwan_rfkill_ops = {
+	.set_block = clevo_xsm_wwan_rfkill_set_block,
 };
 
-static int __init tuxedo_rfkill_init(void)
+static int __init clevo_xsm_rfkill_init(void)
 {
 	int err;
 	u32 unblocked = 0;
@@ -903,53 +921,54 @@ static int __init tuxedo_rfkill_init(void)
 	if (!param_rfkill)
 		return 0;
 
-	tuxedo_wmi_evaluate_wmbb_method(TALK_BIOS_3G, 1, NULL);
+	clevo_xsm_wmi_evaluate_wmbb_method(TALK_BIOS_3G, 1, NULL);
 
-	tuxedo_wwan_rfkill_device = rfkill_alloc("tuxedo-wwan",
-	                                         &tuxedo_platform_device->dev,
-	                                         RFKILL_TYPE_WWAN,
-	                                         &tuxedo_wwan_rfkill_ops, NULL);
-	if (unlikely(!tuxedo_wwan_rfkill_device))
+	clevo_xsm_wwan_rfkill_device = rfkill_alloc("clevo_xsm-wwan",
+											 &clevo_xsm_platform_device->dev,
+											 RFKILL_TYPE_WWAN,
+											 &clevo_xsm_wwan_rfkill_ops, NULL);
+	if (unlikely(!clevo_xsm_wwan_rfkill_device))
 		return -ENOMEM;
 
-	err = rfkill_register(tuxedo_wwan_rfkill_device);
+	err = rfkill_register(clevo_xsm_wwan_rfkill_device);
 	if (unlikely(err))
 		goto err_destroy_wwan;
 
-	if (tuxedo_wmi_evaluate_wmbb_method(GET_POWER_STATE_FOR_3G, 0, &unblocked))
-		TUXEDO_ERROR("Could not get 3G power state!\n");
+	if (clevo_xsm_wmi_evaluate_wmbb_method(GET_POWER_STATE_FOR_3G, 0,
+		&unblocked))
+		CLEVO_XSM_ERROR("Could not get 3G power state!\n");
 	else
-		rfkill_set_sw_state(tuxedo_wwan_rfkill_device, !unblocked);
+		rfkill_set_sw_state(clevo_xsm_wwan_rfkill_device, !unblocked);
 
 	return 0;
 
 err_destroy_wwan:
-	rfkill_destroy(tuxedo_wwan_rfkill_device);
-	tuxedo_wmi_evaluate_wmbb_method(TALK_BIOS_3G, 0, NULL);
+	rfkill_destroy(clevo_xsm_wwan_rfkill_device);
+	clevo_xsm_wmi_evaluate_wmbb_method(TALK_BIOS_3G, 0, NULL);
 	return err;
 }
 
-static void __exit tuxedo_rfkill_exit(void)
+static void __exit clevo_xsm_rfkill_exit(void)
 {
-	if (!tuxedo_wwan_rfkill_device)
+	if (!clevo_xsm_wwan_rfkill_device)
 		return;
 
-	tuxedo_wmi_evaluate_wmbb_method(TALK_BIOS_3G, 0, NULL);
+	clevo_xsm_wmi_evaluate_wmbb_method(TALK_BIOS_3G, 0, NULL);
 
-	rfkill_unregister(tuxedo_wwan_rfkill_device);
-	rfkill_destroy(tuxedo_wwan_rfkill_device);
+	rfkill_unregister(clevo_xsm_wwan_rfkill_device);
+	rfkill_destroy(clevo_xsm_wwan_rfkill_device);
 }
 
 
 /* Sysfs interface */
 
-static ssize_t tuxedo_brightness_show(struct device *child,
+static ssize_t clevo_xsm_brightness_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", kb_backlight.brightness);
 }
 
-static ssize_t tuxedo_brightness_store(struct device *child,
+static ssize_t clevo_xsm_brightness_store(struct device *child,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
 	unsigned int val;
@@ -965,15 +984,15 @@ static ssize_t tuxedo_brightness_store(struct device *child,
 }
 
 static DEVICE_ATTR(kb_brightness, 0644,
-	tuxedo_brightness_show, tuxedo_brightness_store);
+	clevo_xsm_brightness_show, clevo_xsm_brightness_store);
 
-static ssize_t tuxedo_state_show(struct device *child,
+static ssize_t clevo_xsm_state_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", kb_backlight.state);
 }
 
-static ssize_t tuxedo_state_store(struct device *child,
+static ssize_t clevo_xsm_state_store(struct device *child,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
 	unsigned int val;
@@ -990,15 +1009,15 @@ static ssize_t tuxedo_state_store(struct device *child,
 }
 
 static DEVICE_ATTR(kb_state, 0644,
-	tuxedo_state_show, tuxedo_state_store);
+	clevo_xsm_state_show, clevo_xsm_state_store);
 
-static ssize_t tuxedo_mode_show(struct device *child,
+static ssize_t clevo_xsm_mode_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", kb_backlight.mode);
 }
 
-static ssize_t tuxedo_mode_store(struct device *child,
+static ssize_t clevo_xsm_mode_store(struct device *child,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
 	static enum kb_mode modes[] = {
@@ -1026,17 +1045,17 @@ static ssize_t tuxedo_mode_store(struct device *child,
 }
 
 static DEVICE_ATTR(kb_mode, 0644,
-	tuxedo_mode_show, tuxedo_mode_store);
+	clevo_xsm_mode_show, clevo_xsm_mode_store);
 
-static ssize_t tuxedo_color_show(struct device *child,
+static ssize_t clevo_xsm_color_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
-    return sprintf(buf, "%s %s %s\n", kb_colors[kb_backlight.color.left].name,
+	return sprintf(buf, "%s %s %s\n", kb_colors[kb_backlight.color.left].name,
 		kb_colors[kb_backlight.color.center].name,
 		kb_colors[kb_backlight.color.right].name);
 }
 
-static ssize_t tuxedo_color_store(struct device *child,
+static ssize_t clevo_xsm_color_store(struct device *child,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
 	unsigned int i, j;
@@ -1074,26 +1093,26 @@ static ssize_t tuxedo_color_store(struct device *child,
 	return size;
 }
 static DEVICE_ATTR(kb_color, 0644,
-	tuxedo_color_show, tuxedo_color_store);
+	clevo_xsm_color_show, clevo_xsm_color_store);
 
 /* dmi & init & exit */
 
-static int __init tuxedo_dmi_matched(const struct dmi_system_id *id)
+static int __init clevo_xsm_dmi_matched(const struct dmi_system_id *id)
 {
-	TUXEDO_INFO("Model %s found\n", id->ident);
+	CLEVO_XSM_INFO("Model %s found\n", id->ident);
 	kb_backlight.ops = id->driver_data;
 
 	return 1;
 }
 
-static struct dmi_system_id __initdata tuxedo_dmi_table[] = {
+static struct dmi_system_id __initdata clevo_xsm_dmi_table[] = {
 	{
 		.ident = "Clevo P370SM-A",
 		.matches = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P370SM-A"),
 		},
-		.callback = tuxedo_dmi_matched,
+		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_full_color_ops,
 	},
 	{
@@ -1102,7 +1121,7 @@ static struct dmi_system_id __initdata tuxedo_dmi_table[] = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P17SM-A"),
 		},
-		.callback = tuxedo_dmi_matched,
+		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_full_color_ops,
 	},
 	{
@@ -1111,7 +1130,7 @@ static struct dmi_system_id __initdata tuxedo_dmi_table[] = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P15SM-A/SM1-A"),
 		},
-		.callback = tuxedo_dmi_matched,
+		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_full_color_ops,
 	},
 	{
@@ -1120,7 +1139,7 @@ static struct dmi_system_id __initdata tuxedo_dmi_table[] = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P17SM"),
 		},
-		.callback = tuxedo_dmi_matched,
+		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_8_color_ops,
 	},
 	{
@@ -1129,7 +1148,7 @@ static struct dmi_system_id __initdata tuxedo_dmi_table[] = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P15SM"),
 		},
-		.callback = tuxedo_dmi_matched,
+		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_8_color_ops,
 	},
 	{
@@ -1137,9 +1156,9 @@ static struct dmi_system_id __initdata tuxedo_dmi_table[] = {
 	},
 };
 
-MODULE_DEVICE_TABLE(dmi, tuxedo_dmi_table);
+MODULE_DEVICE_TABLE(dmi, clevo_xsm_dmi_table);
 
-static int __init tuxedo_init(void)
+static int __init clevo_xsm_init(void)
 {
 	int err;
 
@@ -1151,75 +1170,70 @@ static int __init tuxedo_init(void)
 		return -EINVAL;
 	}
 
-	dmi_check_system(tuxedo_dmi_table);
+	dmi_check_system(clevo_xsm_dmi_table);
 
 	if (!wmi_has_guid(CLEVO_EVENT_GUID)) {
-		TUXEDO_INFO("No known WMI event notification GUID found\n");
+		CLEVO_XSM_INFO("No known WMI event notification GUID found\n");
 		return -ENODEV;
 	}
 
 	if (!wmi_has_guid(CLEVO_GET_GUID)) {
-		TUXEDO_INFO("No known WMI control method GUID found\n");
+		CLEVO_XSM_INFO("No known WMI control method GUID found\n");
 		return -ENODEV;
 	}
 
-	tuxedo_platform_device =
-		platform_create_bundle(&tuxedo_platform_driver,
-		                       tuxedo_wmi_probe, NULL, 0, NULL, 0);
+	clevo_xsm_platform_device =
+		platform_create_bundle(&clevo_xsm_platform_driver,
+							   clevo_xsm_wmi_probe, NULL, 0, NULL, 0);
 
-	if (unlikely(IS_ERR(tuxedo_platform_device)))
-		return PTR_ERR(tuxedo_platform_device);
+	if (unlikely(IS_ERR(clevo_xsm_platform_device)))
+		return PTR_ERR(clevo_xsm_platform_device);
 
-	err = tuxedo_rfkill_init();
+	err = clevo_xsm_rfkill_init();
 	if (unlikely(err))
-		TUXEDO_ERROR("Could not register rfkill device\n");
+		CLEVO_XSM_ERROR("Could not register rfkill device\n");
 
-	err = tuxedo_input_init();
+	err = clevo_xsm_input_init();
 	if (unlikely(err))
-		TUXEDO_ERROR("Could not register input device\n");
+		CLEVO_XSM_ERROR("Could not register input device\n");
 
-	err = tuxedo_led_init();
+	err = clevo_xsm_led_init();
 	if (unlikely(err))
-		TUXEDO_ERROR("Could not register LED device\n");
+		CLEVO_XSM_ERROR("Could not register LED device\n");
 
-	if (device_create_file(&tuxedo_platform_device->dev,
+	if (device_create_file(&clevo_xsm_platform_device->dev,
 		&dev_attr_kb_brightness) != 0)
-		TUXEDO_ERROR("Sysfs attribute creation failed for brightness\n");
+		CLEVO_XSM_ERROR("Sysfs attribute creation failed for brightness\n");
 
-	if (device_create_file(&tuxedo_platform_device->dev,
+	if (device_create_file(&clevo_xsm_platform_device->dev,
 		&dev_attr_kb_state) != 0)
-		TUXEDO_ERROR("Sysfs attribute creation failed for state\n");
+		CLEVO_XSM_ERROR("Sysfs attribute creation failed for state\n");
 
-	if (device_create_file(&tuxedo_platform_device->dev,
+	if (device_create_file(&clevo_xsm_platform_device->dev,
 		&dev_attr_kb_mode) != 0)
-		TUXEDO_ERROR("Sysfs attribute creation failed for mode\n");
+		CLEVO_XSM_ERROR("Sysfs attribute creation failed for mode\n");
 
-	if (device_create_file(&tuxedo_platform_device->dev,
+	if (device_create_file(&clevo_xsm_platform_device->dev,
 		&dev_attr_kb_color) != 0)
-		TUXEDO_ERROR("Sysfs attribute creation failed for color\n");
+		CLEVO_XSM_ERROR("Sysfs attribute creation failed for color\n");
 
 	return 0;
 }
 
-static void __exit tuxedo_exit(void)
+static void __exit clevo_xsm_exit(void)
 {
-	tuxedo_led_exit();
-	tuxedo_input_exit();
-	tuxedo_rfkill_exit();
+	clevo_xsm_led_exit();
+	clevo_xsm_input_exit();
+	clevo_xsm_rfkill_exit();
 
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_brightness);
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_state);
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_mode);
-	device_remove_file(&tuxedo_platform_device->dev, &dev_attr_kb_color);
+	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_brightness);
+	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_state);
+	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_mode);
+	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_color);
 
-	platform_device_unregister(tuxedo_platform_device);
-	platform_driver_unregister(&tuxedo_platform_driver);
+	platform_device_unregister(clevo_xsm_platform_device);
+	platform_driver_unregister(&clevo_xsm_platform_driver);
 }
 
-module_init(tuxedo_init);
-module_exit(tuxedo_exit);
-
-MODULE_AUTHOR("Christoph Jaeger <christophjaeger@linux.com>");
-MODULE_DESCRIPTION("Clevo laptop driver.");
-MODULE_LICENSE("GPL");
-MODULE_VERSION("1.1.1");
+module_init(clevo_xsm_init);
+module_exit(clevo_xsm_exit);

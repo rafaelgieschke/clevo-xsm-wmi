@@ -1,4 +1,4 @@
-What:			/sys/devices/platform/tuxedo_wmi/kb_state
+What:			/sys/devices/platform/clevo_xsm_wmi/kb_state
 Date:			June 2014
 Contact:		Arnoud Willemsen <mail@lynthium.com>
 Description:	A non-persistant integer with a range from 0 to 1.
@@ -8,7 +8,7 @@ Description:	A non-persistant integer with a range from 0 to 1.
 				This value resets when the module is inserted during boot or
 				after manual invervention.
 
-What:			/sys/devices/platform/tuxedo_wmi/kb_brightness
+What:			/sys/devices/platform/clevo_xsm_wmi/kb_brightness
 Date:			June 2014
 Contact:		Arnoud Willemsen <mail@lynthium.com>
 Description:	A non-persistant integer with a range from 0 to 10.
@@ -19,7 +19,7 @@ Description:	A non-persistant integer with a range from 0 to 10.
 				This value resets when the module is inserted during boot or
 				after manual invervention.
 
-What:			/sys/devices/platform/tuxedo_wmi/kb_mode
+What:			/sys/devices/platform/clevo_xsm_wmi/kb_mode
 Date:			June 2014
 Contact:		Arnoud Willemsen <mail@lynthium.com>
 Description:	A non-persistant integer with a range from 0 to 7.
@@ -30,7 +30,7 @@ Description:	A non-persistant integer with a range from 0 to 7.
 				This value resets when the module is inserted during boot or
 				after manual invervention.
 
-What:			/sys/devices/platform/tuxedo_wmi/kb_color
+What:			/sys/devices/platform/clevo_xsm_wmi/kb_color
 Date:			June 2014
 Contact:		Arnoud Willemsen <mail@lynthium.com>
 Description:	A non-persistant string.
