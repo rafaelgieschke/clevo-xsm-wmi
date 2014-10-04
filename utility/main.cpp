@@ -19,6 +19,8 @@
 
 #include "mainwindow.h"
 #include <QApplication>
+#include <QSettings>
+#include <QFile>
 
 keyboard_s keyboard_settings;
 
@@ -28,9 +30,38 @@ kbcolors_s kb_colors[] = COLORS;
 #undef C
 
 int main(int argc, char *argv[]) {
+    int cli_option = 0;
     QApplication a(argc, argv);
+
+    QStringList args = QCoreApplication::arguments();
+    for(int i = 1; i < args.count(); ++i) {
+        QString arg = args[i];
+        if(arg.startsWith("-")) {
+            QString option, value;
+            int p = arg.indexOf('=');
+            if(p < 0) {
+                option = arg;
+            } else {
+                option = arg.mid(0, p);
+                value = arg.mid(p + 1);
+                if(value.isNull()) value = "";
+            }
+
+            if(option == "--save") {
+                cli_option = 1;
+                saveKeyboardSettings();
+                return 0;
+            } else if(option == "--restore") {
+                cli_option = 1;
+                restoreKeyboardSettings();
+                return 0;
+            }
+        }
+    }
+
     MainWindow w;
-    w.show();
+    if(!cli_option)
+        w.show();
 
     return a.exec();
 }
@@ -133,5 +164,57 @@ void setKeyboardValues() {
         msgBox.setText("Failed to set colors");
         msgBox.setIcon(QMessageBox::Critical);
         msgBox.exec();
+    }
+}
+
+void saveKeyboardSettings() {
+    readKeyboardValues();
+
+    QSettings settings("/etc/clevo-xsm.ini", QSettings::IniFormat);
+
+    if(settings.isWritable()) {
+        settings.beginGroup("settings");
+
+        settings.setValue("kb_brightness", keyboard_settings.brightness);
+        settings.setValue("kb_mode", keyboard_settings.mode);
+        settings.setValue("kb_color_l", kb_colors[keyboard_settings.color_l].name);
+        settings.setValue("kb_color_c", kb_colors[keyboard_settings.color_c].name);
+        settings.setValue("kb_color_r", kb_colors[keyboard_settings.color_r].name);
+
+        settings.endGroup();
+    }
+}
+
+void restoreKeyboardSettings() {
+    QFile file("/etc/clevo-xsm.ini");
+    if(file.exists()) {
+        QSettings settings("/etc/clevo-xsm.ini", QSettings::IniFormat);
+        settings.beginGroup("settings");
+        const QStringList childKeys = settings.childKeys();
+
+        keyboard_settings.brightness = settings.value("kb_brightness").toInt();
+        keyboard_settings.mode = settings.value("kb_mode").toInt();
+
+        QByteArray bcolor_l = settings.value("kb_color_l").toString().toUtf8();
+        const char* color_l = bcolor_l.constData();
+        QByteArray bcolor_c = settings.value("kb_color_c").toString().toUtf8();
+        const char* color_c = bcolor_c.constData();
+        QByteArray bcolor_r = settings.value("kb_color_r").toString().toUtf8();
+        const char* color_r = bcolor_r.constData();
+
+
+        for (unsigned int j = 0;
+            j < (sizeof(kb_colors) / sizeof((kb_colors)[0])); j++) {
+            if (!strcmp(color_l, kb_colors[j].name))
+                keyboard_settings.color_l = j;
+            if (!strcmp(color_c, kb_colors[j].name))
+                keyboard_settings.color_c = j;
+            if (!strcmp(color_r, kb_colors[j].name))
+                keyboard_settings.color_r = j;
+        }
+
+        settings.endGroup();
+
+        setKeyboardValues();
     }
 }

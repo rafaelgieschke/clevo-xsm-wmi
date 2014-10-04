@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply clevo-xsm-wmi configuration
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/clevo-xsm-wmi --restore
+ExecStop=/usr/bin/clevo-xsm-wmi --save
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

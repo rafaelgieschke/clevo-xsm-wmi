@@ -90,5 +90,7 @@ extern kbcolors_s kb_colors[];
 
 void readKeyboardValues();
 void setKeyboardValues();
+void saveKeyboardSettings();
+void restoreKeyboardSettings();
 
 #endif // MAINWINDOW_H

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Clevo xSM wmi Utility</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QRadioButton" name="radio_random_color">
