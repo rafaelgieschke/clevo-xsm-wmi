@@ -38,7 +38,7 @@
 MODULE_AUTHOR("Arnoud Willemsen <mail@lynthium.com>");
 MODULE_DESCRIPTION("Clevo SM series laptop driver.");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.0.1");
+MODULE_VERSION("0.0.2");
 
 #define CLEVO_XSM_DRIVER_NAME KBUILD_MODNAME
 
@@ -212,6 +212,83 @@ MODULE_PARM_DESC(poll_freq, "Set polling frequency");
 
 struct platform_device *clevo_xsm_platform_device;
 
+
+/* LED sub-driver */
+
+static struct workqueue_struct *led_workqueue;
+
+static struct _led_work {
+	struct work_struct work;
+	int wk;
+} led_work;
+
+static void airplane_led_update(struct work_struct *work)
+{
+	u8 byte;
+	struct _led_work *w;
+
+	w = container_of(work, struct _led_work, work);
+
+	ec_read(0xD9, &byte);
+	ec_write(0xD9, w->wk ? byte | 0x40 : byte & ~0x40);
+
+	/* wmbb 0x6C 1 */
+}
+
+static enum led_brightness airplane_led_get(struct led_classdev *led_cdev)
+{
+	u8 byte;
+
+	ec_read(0xD9, &byte);
+	return byte & 0x40 ? LED_FULL : LED_OFF;
+}
+
+/* must not sleep */
+static void airplane_led_set(struct led_classdev *led_cdev,
+							 enum led_brightness value)
+{
+	led_work.wk = value;
+	queue_work(led_workqueue, &led_work.work);
+}
+
+static struct led_classdev airplane_led = {
+	.name = "clevo_xsm::airplane",
+	.brightness_get = airplane_led_get,
+	.brightness_set = airplane_led_set,
+	.max_brightness = 1,
+};
+
+static int __init clevo_xsm_led_init(void)
+{
+	int err;
+
+	led_workqueue = create_singlethread_workqueue("led_workqueue");
+	if (unlikely(!led_workqueue))
+		return -ENOMEM;
+
+	INIT_WORK(&led_work.work, airplane_led_update);
+
+	err = led_classdev_register(&clevo_xsm_platform_device->dev, &airplane_led);
+	if (unlikely(err))
+		goto err_destroy_workqueue;
+
+	return 0;
+
+err_destroy_workqueue:
+	destroy_workqueue(led_workqueue);
+	led_workqueue = NULL;
+
+	return err;
+}
+
+static void __exit clevo_xsm_led_exit(void)
+{
+	if (!IS_ERR_OR_NULL(airplane_led.dev))
+		led_classdev_unregister(&airplane_led);
+	if (led_workqueue)
+		destroy_workqueue(led_workqueue);
+}
+
 /* input sub-driver */
 
 static struct input_dev *clevo_xsm_input_device;
@@ -257,6 +334,10 @@ static int clevo_xsm_input_polling_thread(void *data)
 
 			clevo_xsm_input_report_key(KEY_RFKILL);
 			report_cnt++;
+
+			CLEVO_XSM_DEBUG("Led status: %d", airplane_led_get(&airplane_led));
+
+			airplane_led_set(&airplane_led, (airplane_led_get(&airplane_led) ? 0 : 1));
 
 			mutex_unlock(&clevo_xsm_input_report_mutex);
 		}
@@ -813,83 +894,6 @@ static struct platform_driver clevo_xsm_platform_driver = {
 		.owner = THIS_MODULE,
 	},
 };
-
-
-/* LED sub-driver */
-
-static struct workqueue_struct *led_workqueue;
-
-static struct _led_work {
-	struct work_struct work;
-	int wk;
-} led_work;
-
-static void airplane_led_update(struct work_struct *work)
-{
-	u8 byte;
-	struct _led_work *w;
-
-	w = container_of(work, struct _led_work, work);
-
-	ec_read(0xD9, &byte);
-	ec_write(0xD9, w->wk ? byte | 0x40 : byte & ~0x40);
-
-	/* wmbb 0x6C 1 */
-}
-
-static enum led_brightness airplane_led_get(struct led_classdev *led_cdev)
-{
-	u8 byte;
-
-	ec_read(0xD9, &byte);
-	return byte & 0x40 ? LED_FULL : LED_OFF;
-}
-
-/* must not sleep */
-static void airplane_led_set(struct led_classdev *led_cdev,
-							 enum led_brightness value)
-{
-	led_work.wk = value;
-	queue_work(led_workqueue, &led_work.work);
-}
-
-static struct led_classdev airplane_led = {
-	.name = "clevo_xsm::airplane",
-	.brightness_get = airplane_led_get,
-	.brightness_set = airplane_led_set,
-	.max_brightness = 1,
-};
-
-static int __init clevo_xsm_led_init(void)
-{
-	int err;
-
-	led_workqueue = create_singlethread_workqueue("led_workqueue");
-	if (unlikely(!led_workqueue))
-		return -ENOMEM;
-
-	INIT_WORK(&led_work.work, airplane_led_update);
-
-	err = led_classdev_register(&clevo_xsm_platform_device->dev, &airplane_led);
-	if (unlikely(err))
-		goto err_destroy_workqueue;
-
-	return 0;
-
-err_destroy_workqueue:
-	destroy_workqueue(led_workqueue);
-	led_workqueue = NULL;
-
-	return err;
-}
-
-static void __exit clevo_xsm_led_exit(void)
-{
-	if (!IS_ERR_OR_NULL(airplane_led.dev))
-		led_classdev_unregister(&airplane_led);
-	if (led_workqueue)
-		destroy_workqueue(led_workqueue);
-}
 
 
 /* RFKILL sub-driver */
