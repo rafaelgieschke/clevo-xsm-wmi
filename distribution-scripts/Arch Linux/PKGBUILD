@@ -2,8 +2,8 @@
 
 pkgname=('clevo-xsm-wmi-module'
          'clevo-xsm-wmi-utility')
-pkgver='0.2'
-_pkgtag='95c8582af992'
+pkgver='0.3'
+_pkgtag='7394b8437fbe'
 pkgrel=1
 pkgdesc='A reverse engineering driver for the Clevo SM series backlight keyboard.'
 arch=('i686' 'x86_64')
