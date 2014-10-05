@@ -3,8 +3,8 @@ Description=Apply clevo-xsm-wmi configuration
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/clevo-xsm-wmi --restore
-ExecStop=/usr/bin/clevo-xsm-wmi --save
+ExecStart=/usr/bin/clevo-xsm-wmi -r
+ExecStop=/usr/bin/clevo-xsm-wmi -s
 RemainAfterExit=yes
 
 [Install]

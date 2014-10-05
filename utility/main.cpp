@@ -21,6 +21,7 @@
 #include <QApplication>
 #include <QSettings>
 #include <QFile>
+#include <getopt.h>
 
 keyboard_s keyboard_settings;
 
@@ -30,38 +31,25 @@ kbcolors_s kb_colors[] = COLORS;
 #undef C
 
 int main(int argc, char *argv[]) {
-    int cli_option = 0;
+    int opt = 0;
+
+	while ((opt = getopt(argc, argv, "sr")) != -1)
+		switch(opt) {
+			case 's':
+				saveKeyboardSettings();
+				return 0;
+				break;
+			case 'r':
+				restoreKeyboardSettings();
+				return 0;
+				break;
+		}
+
+
     QApplication a(argc, argv);
-
-    QStringList args = QCoreApplication::arguments();
-    for(int i = 1; i < args.count(); ++i) {
-        QString arg = args[i];
-        if(arg.startsWith("-")) {
-            QString option, value;
-            int p = arg.indexOf('=');
-            if(p < 0) {
-                option = arg;
-            } else {
-                option = arg.mid(0, p);
-                value = arg.mid(p + 1);
-                if(value.isNull()) value = "";
-            }
-
-            if(option == "--save") {
-                cli_option = 1;
-                saveKeyboardSettings();
-                return 0;
-            } else if(option == "--restore") {
-                cli_option = 1;
-                restoreKeyboardSettings();
-                return 0;
-            }
-        }
-    }
-
     MainWindow w;
-    if(!cli_option)
-        w.show();
+
+    w.show();
 
     return a.exec();
 }
