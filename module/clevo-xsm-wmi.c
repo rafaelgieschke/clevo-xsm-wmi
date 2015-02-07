@@ -1156,6 +1156,15 @@ static struct dmi_system_id __initdata clevo_xsm_dmi_table[] = {
 		.driver_data = &kb_8_color_ops,
 	},
 	{
+		.ident = "Clevo P15xEM",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "CLEVO"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "P150EM"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_8_color_ops,
+	},
+	{
 		/* terminating NULL entry */
 	},
 };
