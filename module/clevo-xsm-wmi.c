@@ -4,7 +4,7 @@
  * Copyright (C) 2014 Arnoud Willemsen <mail@lynthium.com>
  *
  * Based on tuxedo-wmi by Christoph Jaeger
- * Copyright (C) 2013-2014 Christoph Jaeger <christophjaeger@linux.com>
+ * Copyright (C) 2013-2014 Christoph Jaeger <cj@linux.com>
  *
  * This program is free software;  you can redistribute it and/or modify
  * it under the terms of the  GNU General Public License as published by
@@ -19,6 +19,9 @@
  * You should  have received  a copy of  the GNU General  Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#define CLEVO_XSM_DRIVER_NAME KBUILD_MODNAME
+#define pr_fmt(fmt) CLEVO_XSM_DRIVER_NAME ": " fmt
 
 #include <linux/acpi.h>
 #include <linux/delay.h>
@@ -35,19 +38,12 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 
-MODULE_AUTHOR("Arnoud Willemsen <mail@lynthium.com>");
-MODULE_DESCRIPTION("Clevo SM series laptop driver.");
-MODULE_LICENSE("GPL");
-MODULE_VERSION("0.0.2");
-
-#define CLEVO_XSM_DRIVER_NAME KBUILD_MODNAME
-
-#define __CLEVO_XSM_PR(lvl, fmt, ...) \
-	do { pr_##lvl(CLEVO_XSM_DRIVER_NAME ": " fmt, ##__VA_ARGS__); } while (0)
+#define __CLEVO_XSM_PR(lvl, fmt, ...) do { pr_##lvl(fmt, ##__VA_ARGS__); } \
+		while (0)
 #define CLEVO_XSM_INFO(fmt, ...) __CLEVO_XSM_PR(info, fmt, ##__VA_ARGS__)
 #define CLEVO_XSM_ERROR(fmt, ...) __CLEVO_XSM_PR(err, fmt, ##__VA_ARGS__)
-#define CLEVO_XSM_DEBUG(fmt, ...) __CLEVO_XSM_PR(debug, "[%s:%u] " fmt, \
-	__func__, __LINE__, ##__VA_ARGS__)
+#define CLEVO_XSM_DEBUG(fmt, ...) __CLEVO_XSM_PR(debug, "[%s:%u] " fmt,	\
+		__func__, __LINE__, ##__VA_ARGS__)
 
 #define CLEVO_EVENT_GUID  "ABBC0F6B-8EA1-11D1-00A0-C90629100000"
 #define CLEVO_EMAIL_GUID  "ABBC0F6C-8EA1-11D1-00A0-C90629100000"
@@ -74,7 +70,7 @@ enum kb_color COLORS;
 
 union kb_rgb_color {
 	u32 rgb;
-	struct { u32 b:8, g:8, r:8, :8; };
+	struct { u32 b:8, g:8, r:8, : 8; };
 };
 
 #define C(n, v) { .name = #n, .value = { .rgb = v, }, }
@@ -112,7 +108,8 @@ static int param_set_kb_color(const char *val, const struct kernel_param *kp)
 
 static int param_get_kb_color(char *buffer, const struct kernel_param *kp)
 {
-	return sprintf(buffer, "%s", kb_colors[*((enum kb_color *) kp->arg)].name);
+	return sprintf(buffer, "%s",
+		kb_colors[*((enum kb_color *) kp->arg)].name);
 }
 
 static const struct kernel_param_ops param_ops_kb_color = {
@@ -120,8 +117,8 @@ static const struct kernel_param_ops param_ops_kb_color = {
 	.get = param_get_kb_color,
 };
 
-static enum kb_color param_kb_color[3] = { [0 ... 2] = KB_COLOR_DEFAULT };
-static int param_kb_color_num = 3;
+static enum kb_color param_kb_color[] = { [0 ... 2] = KB_COLOR_DEFAULT };
+static int param_kb_color_num;
 #define param_check_kb_color(name, p) __param_check(name, p, enum kb_color)
 module_param_array_named(kb_color, param_kb_color, kb_color,
 						 &param_kb_color_num, S_IRUSR);
@@ -141,21 +138,9 @@ static int param_set_kb_brightness(const char *val,
 	return ret;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
-static int param_get_kb_brightness(char *buffer, const struct kernel_param *kp)
-{
-	/* due to a bug in the kernel, we do this ourselves */
-	return sprintf(buffer, "%hhu", *((unsigned char *) kp->arg));
-}
-#endif
-
 static const struct kernel_param_ops param_ops_kb_brightness = {
 	.set = param_set_kb_brightness,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
-	.get = param_get_kb_brightness,
-#else
 	.get = param_get_byte,
-#endif
 };
 
 static unsigned char param_kb_brightness = KB_BRIGHTNESS_DEFAULT;
@@ -164,9 +149,13 @@ module_param_named(kb_brightness, param_kb_brightness, kb_brightness, S_IRUSR);
 MODULE_PARM_DESC(kb_brightness, "Set the brightness of the keyboard backlight");
 
 
-static bool param_kb_off = false;
+static bool param_kb_off;
 module_param_named(kb_off, param_kb_off, bool, S_IRUSR);
 MODULE_PARM_DESC(kb_off, "Switch keyboard backlight off");
+
+static bool param_kb_cycle_colors;
+module_param_named(kb_cycle_colors, param_kb_cycle_colors, bool, S_IRUSR);
+MODULE_PARM_DESC(kb_cycle_colors, "Cycle colors rather than modes");
 
 
 #define POLL_FREQ_MIN     1
@@ -181,27 +170,16 @@ static int param_set_poll_freq(const char *val, const struct kernel_param *kp)
 
 	if (!ret)
 		*((unsigned char *) kp->arg) = clamp_t(unsigned char,
-											   *((unsigned char *) kp->arg),
-											   POLL_FREQ_MIN, POLL_FREQ_MAX);
+			*((unsigned char *) kp->arg),
+			POLL_FREQ_MIN, POLL_FREQ_MAX);
 
 	return ret;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
-static int param_get_poll_freq(char *buffer, const struct kernel_param *kp)
-{
-	/* due to a bug in the kernel, we do this ourselves */
-	return sprintf(buffer, "%hhu", *((unsigned char *) kp->arg));
-}
-#endif
 
 static const struct kernel_param_ops param_ops_poll_freq = {
 	.set = param_set_poll_freq,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
-	.get = param_get_poll_freq,
-#else
 	.get = param_get_byte,
-#endif
 };
 
 static unsigned char param_poll_freq = POLL_FREQ_DEFAULT;
@@ -214,6 +192,10 @@ struct platform_device *clevo_xsm_platform_device;
 
 
 /* LED sub-driver */
+
+static bool param_led_invert;
+module_param_named(led_invert, param_led_invert, bool, 0);
+MODULE_PARM_DESC(led_invert, "Invert airplane mode LED state.");
 
 static struct workqueue_struct *led_workqueue;
 
@@ -230,9 +212,13 @@ static void airplane_led_update(struct work_struct *work)
 	w = container_of(work, struct _led_work, work);
 
 	ec_read(0xD9, &byte);
-	ec_write(0xD9, w->wk ? byte | 0x40 : byte & ~0x40);
 
-	/* wmbb 0x6C 1 */
+	if (param_led_invert)
+		ec_write(0xD9, w->wk ? byte & ~0x40 : byte | 0x40);
+	else
+		ec_write(0xD9, w->wk ? byte | 0x40 : byte & ~0x40);
+
+	/* wmbb 0x6C 1 (?) */
 }
 
 static enum led_brightness airplane_led_get(struct led_classdev *led_cdev)
@@ -240,12 +226,16 @@ static enum led_brightness airplane_led_get(struct led_classdev *led_cdev)
 	u8 byte;
 
 	ec_read(0xD9, &byte);
-	return byte & 0x40 ? LED_FULL : LED_OFF;
+
+	if (param_led_invert)
+		return byte & 0x40 ? LED_OFF : LED_FULL;
+	else
+		return byte & 0x40 ? LED_FULL : LED_OFF;
 }
 
 /* must not sleep */
 static void airplane_led_set(struct led_classdev *led_cdev,
-							 enum led_brightness value)
+	enum led_brightness value)
 {
 	led_work.wk = value;
 	queue_work(led_workqueue, &led_work.work);
@@ -268,7 +258,8 @@ static int __init clevo_xsm_led_init(void)
 
 	INIT_WORK(&led_work.work, airplane_led_update);
 
-	err = led_classdev_register(&clevo_xsm_platform_device->dev, &airplane_led);
+	err = led_classdev_register(&clevo_xsm_platform_device->dev,
+		&airplane_led);
 	if (unlikely(err))
 		goto err_destroy_workqueue;
 
@@ -294,7 +285,7 @@ static void __exit clevo_xsm_led_exit(void)
 static struct input_dev *clevo_xsm_input_device;
 static DEFINE_MUTEX(clevo_xsm_input_report_mutex);
 
-static unsigned int global_report_cnt = 0;
+static unsigned int global_report_cnt;
 
 /* call with clevo_xsm_input_report_mutex held */
 static void clevo_xsm_input_report_key(unsigned int code)
@@ -335,13 +326,15 @@ static int clevo_xsm_input_polling_thread(void *data)
 			clevo_xsm_input_report_key(KEY_RFKILL);
 			report_cnt++;
 
-			CLEVO_XSM_DEBUG("Led status: %d", airplane_led_get(&airplane_led));
+			CLEVO_XSM_DEBUG("Led status: %d",
+				airplane_led_get(&airplane_led));
 
-			airplane_led_set(&airplane_led, (airplane_led_get(&airplane_led) ? 0 : 1));
+			airplane_led_set(&airplane_led,
+				(airplane_led_get(&airplane_led) ? 0 : 1));
 
 			mutex_unlock(&clevo_xsm_input_report_mutex);
 		}
-		msleep(1000 / param_poll_freq);
+		msleep_interruptible(1000 / param_poll_freq);
 	}
 
 	CLEVO_XSM_INFO("Polling thread exiting\n");
@@ -351,8 +344,9 @@ static int clevo_xsm_input_polling_thread(void *data)
 
 static int clevo_xsm_input_open(struct input_dev *dev)
 {
-	clevo_xsm_input_polling_task = kthread_run(clevo_xsm_input_polling_thread,
-										   NULL, "clevo_xsm-polld");
+	clevo_xsm_input_polling_task = kthread_run(
+		clevo_xsm_input_polling_thread,
+		NULL, "clevo_xsm-polld");
 
 	if (unlikely(IS_ERR(clevo_xsm_input_polling_task))) {
 		clevo_xsm_input_polling_task = NULL;
@@ -433,10 +427,10 @@ static int clevo_xsm_wmi_evaluate_wmbb_method(u32 method_id, u32 arg,
 	CLEVO_XSM_DEBUG("%0#4x  IN : %0#6x\n", method_id, arg);
 
 	status = wmi_evaluate_method(CLEVO_GET_GUID, 0x01,
-								 method_id, &in, &out);
+		method_id, &in, &out);
 
 	if (unlikely(ACPI_FAILURE(status)))
-	goto exit;
+		goto exit;
 
 	obj = (union acpi_object *) out.pointer;
 	if (obj && obj->type == ACPI_TYPE_INTEGER)
@@ -487,7 +481,8 @@ static struct {
 
 	struct kb_backlight_ops {
 		void (*set_state)(enum kb_state state);
-		void (*set_color)(unsigned left, unsigned center, unsigned right);
+		void (*set_color)(unsigned left, unsigned center,
+			unsigned right);
 		void (*set_brightness)(unsigned brightness);
 		void (*set_mode)(enum kb_mode);
 		void (*init)(void);
@@ -562,6 +557,26 @@ static void kb_next_mode(void)
 	kb_backlight.ops->set_mode(modes[(i + 1) % ARRAY_SIZE(modes)]);
 }
 
+static void kb_next_color(void)
+{
+	size_t i;
+	unsigned int nc;
+
+	if (kb_backlight.state == KB_STATE_OFF)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(kb_colors); i++) {
+		if (i == kb_backlight.color.left)
+			break;
+	}
+
+	if (i + 1 > ARRAY_SIZE(kb_colors))
+		nc = 0;
+	else
+		nc = i + 1;
+
+	kb_backlight.ops->set_color(nc, nc, nc);
+}
 
 /* full color backlight keyboard */
 
@@ -627,8 +642,8 @@ static void kb_full_color__set_mode(unsigned mode)
 
 	if (mode == KB_MODE_CUSTOM) {
 		kb_full_color__set_color(kb_backlight.color.left,
-								 kb_backlight.color.center,
-								 kb_backlight.color.right);
+			kb_backlight.color.center,
+			kb_backlight.color.right);
 		kb_full_color__set_brightness(kb_backlight.brightness);
 		return;
 	}
@@ -730,15 +745,16 @@ static void kb_8_color__set_mode(unsigned mode)
 
 	clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, 0x20000000, NULL);
 
-	if (mode == KB_MODE_CUSTOM){
+	if (mode == KB_MODE_CUSTOM) {
 		kb_8_color__set_color(kb_backlight.color.left,
-							  kb_backlight.color.center,
-							  kb_backlight.color.right);
+			kb_backlight.color.center,
+			kb_backlight.color.right);
 		kb_8_color__set_brightness(kb_backlight.brightness);
 		return;
 	}
 
-	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, cmds[mode], NULL))
+	if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED,
+		cmds[mode], NULL))
 		kb_backlight.mode = mode;
 }
 
@@ -748,7 +764,8 @@ static void kb_8_color__set_state(enum kb_state state)
 
 	switch (state) {
 	case KB_STATE_OFF:
-		if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED, 0x22010000, NULL))
+		if (!clevo_xsm_wmi_evaluate_wmbb_method(SET_KB_LED,
+			0x22010000, NULL))
 			kb_backlight.state = state;
 		break;
 	case KB_STATE_ON:
@@ -777,8 +794,8 @@ static void kb_8_color__init(void)
 
 	if (!param_kb_off) {
 		kb_8_color__set_color(kb_backlight.color.left,
-							  kb_backlight.color.center,
-							  kb_backlight.color.right);
+			kb_backlight.color.center,
+			kb_backlight.color.right);
 		kb_8_color__set_brightness(kb_backlight.brightness);
 		kb_8_color__set_state(KB_STATE_ON);
 	}
@@ -795,7 +812,7 @@ static struct kb_backlight_ops kb_8_color_ops = {
 
 static void clevo_xsm_wmi_notify(u32 value, void *context)
 {
-	static unsigned int report_cnt = 0;
+	static unsigned int report_cnt;
 
 	u32 event;
 
@@ -840,7 +857,10 @@ static void clevo_xsm_wmi_notify(u32 value, void *context)
 			kb_inc_brightness();
 			break;
 		case 0x83:
-			kb_next_mode();
+			if (!param_kb_cycle_colors)
+				kb_next_mode();
+			else
+				kb_next_color();
 			break;
 		case 0x9F:
 			kb_toggle_state();
@@ -855,10 +875,10 @@ static int clevo_xsm_wmi_probe(struct platform_device *dev)
 	int status;
 
 	status = wmi_install_notify_handler(CLEVO_EVENT_GUID,
-										clevo_xsm_wmi_notify, NULL);
+		clevo_xsm_wmi_notify, NULL);
 	if (unlikely(ACPI_FAILURE(status))) {
 		CLEVO_XSM_ERROR("Could not register WMI notify handler (%0#6x)\n",
-					 status);
+			status);
 		return -EIO;
 	}
 
@@ -898,7 +918,7 @@ static struct platform_driver clevo_xsm_platform_driver = {
 
 /* RFKILL sub-driver */
 
-static bool param_rfkill = false;
+static bool param_rfkill;
 module_param_named(rfkill, param_rfkill, bool, 0);
 MODULE_PARM_DESC(rfkill, "Enable WWAN-RFKILL capability.");
 
@@ -928,9 +948,9 @@ static int __init clevo_xsm_rfkill_init(void)
 	clevo_xsm_wmi_evaluate_wmbb_method(TALK_BIOS_3G, 1, NULL);
 
 	clevo_xsm_wwan_rfkill_device = rfkill_alloc("clevo_xsm-wwan",
-											 &clevo_xsm_platform_device->dev,
-											 RFKILL_TYPE_WWAN,
-											 &clevo_xsm_wwan_rfkill_ops, NULL);
+		&clevo_xsm_platform_device->dev,
+		RFKILL_TYPE_WWAN,
+		&clevo_xsm_wwan_rfkill_ops, NULL);
 	if (unlikely(!clevo_xsm_wwan_rfkill_device))
 		return -ENOMEM;
 
@@ -1054,7 +1074,8 @@ static DEVICE_ATTR(kb_mode, 0644,
 static ssize_t clevo_xsm_color_show(struct device *child,
 	struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s %s %s\n", kb_colors[kb_backlight.color.left].name,
+	return sprintf(buf, "%s %s %s\n",
+		kb_colors[kb_backlight.color.left].name,
 		kb_colors[kb_backlight.color.center].name,
 		kb_colors[kb_backlight.color.right].name);
 }
@@ -1109,7 +1130,7 @@ static int __init clevo_xsm_dmi_matched(const struct dmi_system_id *id)
 	return 1;
 }
 
-static struct dmi_system_id __initdata clevo_xsm_dmi_table[] = {
+static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
 		.ident = "Clevo P370SM-A",
 		.matches = {
@@ -1197,7 +1218,7 @@ static int __init clevo_xsm_init(void)
 
 	clevo_xsm_platform_device =
 		platform_create_bundle(&clevo_xsm_platform_driver,
-							   clevo_xsm_wmi_probe, NULL, 0, NULL, 0);
+			clevo_xsm_wmi_probe, NULL, 0, NULL, 0);
 
 	if (unlikely(IS_ERR(clevo_xsm_platform_device)))
 		return PTR_ERR(clevo_xsm_platform_device);
@@ -1239,7 +1260,8 @@ static void __exit clevo_xsm_exit(void)
 	clevo_xsm_input_exit();
 	clevo_xsm_rfkill_exit();
 
-	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_brightness);
+	device_remove_file(&clevo_xsm_platform_device->dev,
+		&dev_attr_kb_brightness);
 	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_state);
 	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_mode);
 	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_color);
@@ -1250,3 +1272,8 @@ static void __exit clevo_xsm_exit(void)
 
 module_init(clevo_xsm_init);
 module_exit(clevo_xsm_exit);
+
+MODULE_AUTHOR("Arnoud Willemsen <mail@lynthium.com>");
+MODULE_DESCRIPTION("Clevo SM series laptop driver.");
+MODULE_LICENSE("GPL");
+MODULE_VERSION("0.0.6");
