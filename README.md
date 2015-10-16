@@ -11,6 +11,7 @@ http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
   In the original code you can only set these before the module loads.
 * Small application to visually control the keyboard lighting using the sysfs
   interface.
+* Cycle through colours rather than modes with the keyboard key.
 
 ### License
 This program is free software;  you can redistribute it and/or modify
