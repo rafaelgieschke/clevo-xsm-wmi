@@ -32,7 +32,7 @@ $ sudo install -Dm755 systemd/clevo-xsm-wmi.service /usr/lib/systemd/system/clev
 
 ### Distributions
 
-Arch Linux: Module(https://aur.archlinux.org/packages/clevo-xsm-wmi/) DKMS(https://aur.archlinux.org/packages/clevo-xsm-wmi-dkms/) Utility(https://aur.archlinux.org/packages/clevo-xsm-wmi-util/)
+Arch Linux: [Module](https://aur.archlinux.org/packages/clevo-xsm-wmi/) [DKMS](https://aur.archlinux.org/packages/clevo-xsm-wmi-dkms/) [Utility](https://aur.archlinux.org/packages/clevo-xsm-wmi-util/)
 
 ### License
 This program is free software;  you can redistribute it and/or modify
