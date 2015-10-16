@@ -13,6 +13,27 @@ http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
   interface.
 * Cycle through colours rather than modes with the keyboard key.
 
+### Building
+
+Dependencies:
+* standard compile stuff (c compiler, make, etc)
+* linux-headers
+* qt5-base (for utility)
+
+Building:
+```bash
+# For the module
+$ cd module && make && sudo make install
+# For the utility
+$ cd utility && qmake && make
+$ sudo install -Dm755 clevo-xsm-wmi /usr/bin/clevo-xsm-wmi
+$ sudo install -Dm755 systemd/clevo-xsm-wmi.service /usr/lib/systemd/system/clevo-xsm-wmi.service
+```
+
+### Distributions
+
+Arch Linux: Module(https://aur.archlinux.org/packages/clevo-xsm-wmi/) DKMS(https://aur.archlinux.org/packages/clevo-xsm-wmi-dkms/) Utility(https://aur.archlinux.org/packages/clevo-xsm-wmi-util/)
+
 ### License
 This program is free software;  you can redistribute it and/or modify
 it under the terms of the  GNU General Public License as published by
