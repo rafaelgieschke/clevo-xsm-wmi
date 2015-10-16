@@ -16,6 +16,7 @@ http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
 ### Building
 
 Dependencies:
+
 * standard compile stuff (c compiler, make, etc)
 * linux-headers
 * qt5-base (for utility)
