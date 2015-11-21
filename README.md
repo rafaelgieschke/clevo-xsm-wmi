@@ -1,6 +1,7 @@
 # Clevo-xSM-wmi
 
 Kernel module for keyboard backlighting of Clevo SM series notebooks.
+(And the P150EM, P750DM, P750DM-G, P770DM, P770DM-G models)
 
 Based upon tuxedo-wmi, created by Christoph Jaeger.
 http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
@@ -20,6 +21,10 @@ Dependencies:
 * standard compile stuff (c compiler, make, etc)
 * linux-headers
 * qt5-base (for utility)
+
+* Fedora 22+ Dependencies:
+** use qmake-qt5 instead of qmake
+** install qt5-qt3d-devel with DNF
 
 Building:
 ```bash

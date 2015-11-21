@@ -1132,6 +1132,15 @@ static int __init clevo_xsm_dmi_matched(const struct dmi_system_id *id)
 
 static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
+		.ident = "Clevo P7xxDM(-G)",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "P7xxDM(-G)"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_ops,
+    },
+    {
 		.ident = "Clevo P370SM-A",
 		.matches = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
@@ -1276,4 +1285,4 @@ module_exit(clevo_xsm_exit);
 MODULE_AUTHOR("Arnoud Willemsen <mail@lynthium.com>");
 MODULE_DESCRIPTION("Clevo SM series laptop driver.");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.0.6");
+MODULE_VERSION("0.0.7");
