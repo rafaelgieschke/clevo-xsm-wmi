@@ -22,9 +22,10 @@ Dependencies:
 * linux-headers
 * qt5-base (for utility)
 
-* Fedora 22+ Dependencies:
-** use qmake-qt5 instead of qmake
-** install qt5-qt3d-devel with DNF
+Fedora 22+ Dependencies:
+
+* use qmake-qt5 instead of qmake
+* install qt5-qt3d-devel with DNF
 
 Building:
 ```bash
