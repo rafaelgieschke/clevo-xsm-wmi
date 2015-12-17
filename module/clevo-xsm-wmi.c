@@ -998,6 +998,9 @@ static ssize_t clevo_xsm_brightness_store(struct device *child,
 	unsigned int val;
 	int ret;
 
+	if (!kb_backlight.ops)
+		return -EINVAL;
+
 	ret = kstrtouint(buf, 0, &val);
 	if (ret)
 		return ret;
@@ -1021,6 +1024,9 @@ static ssize_t clevo_xsm_state_store(struct device *child,
 {
 	unsigned int val;
 	int ret;
+
+	if (!kb_backlight.ops)
+		return -EINVAL;
 
 	ret = kstrtouint(buf, 0, &val);
 	if (ret)
@@ -1058,6 +1064,9 @@ static ssize_t clevo_xsm_mode_store(struct device *child,
 	unsigned int val;
 	int ret;
 
+	if (!kb_backlight.ops)
+		return -EINVAL;
+
 	ret = kstrtouint(buf, 0, &val);
 	if (ret)
 		return ret;
@@ -1088,6 +1097,9 @@ static ssize_t clevo_xsm_color_store(struct device *child,
 	char left[8];
 	char right[8];
 	char center[8];
+
+	if (!kb_backlight.ops)
+		return -EINVAL;
 
 	i = sscanf(buf, "%7s %7s %7s", left, center, right);
 
