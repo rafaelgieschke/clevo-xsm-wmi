@@ -1297,4 +1297,4 @@ module_exit(clevo_xsm_exit);
 MODULE_AUTHOR("Arnoud Willemsen <mail@lynthium.com>");
 MODULE_DESCRIPTION("Clevo SM series laptop driver.");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.0.7");
+MODULE_VERSION("0.0.8");
