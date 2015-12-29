@@ -1146,7 +1146,6 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
 		.ident = "Clevo P7xxDM(-G)",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P7xxDM(-G)"),
 		},
 		.callback = clevo_xsm_dmi_matched,
@@ -1155,7 +1154,6 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
     {
 		.ident = "Clevo P370SM-A",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P370SM-A"),
 		},
 		.callback = clevo_xsm_dmi_matched,
@@ -1164,7 +1162,6 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
 		.ident = "Clevo P17xSM-A",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P17SM-A"),
 		},
 		.callback = clevo_xsm_dmi_matched,
@@ -1173,8 +1170,15 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
 		.ident = "Clevo P15xSM-A/P15xSM1-A",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P15SM-A/SM1-A"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_ops,
+	},
+	{
+		.ident = "Clevo P15xSM-A/P15xSM1-A",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "P15SM-A"),
 		},
 		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_full_color_ops,
@@ -1182,7 +1186,6 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
 		.ident = "Clevo P17xSM",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P17SM"),
 		},
 		.callback = clevo_xsm_dmi_matched,
@@ -1191,7 +1194,6 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
 		.ident = "Clevo P15xSM",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Notebook"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P15SM"),
 		},
 		.callback = clevo_xsm_dmi_matched,
@@ -1200,7 +1202,6 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
 		.ident = "Clevo P15xEM",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "CLEVO"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "P150EM"),
 		},
 		.callback = clevo_xsm_dmi_matched,
