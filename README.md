@@ -1,18 +1,18 @@
-# Clevo-xSM-wmi
+# clevo-xsm-wmi
 
 Kernel module for keyboard backlighting of Clevo SM series notebooks.
-(And the P150EM, P750DM, P750DM-G, P770DM, P770DM-G models)
+(And the P150EM, P720ZM, P750DM(-G), P770DM(-G) models)
 
-Based upon tuxedo-wmi, created by Christoph Jaeger.
+Based upon tuxedo-wmi, created by TUXEDO Computers GmbH.
 http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
 
 ### Additions over tuxedo-wmi
 * Sysfs interface to control the brightness, mode, colour,
   on/off state after the module has loaded.
   In the original code you can only set these before the module loads.
-* Small application to visually control the keyboard lighting using the sysfs
-  interface.
+* Small QT based application to visually control the keyboard lighting using the sysfs interface.
 * Cycle through colours rather than modes with the keyboard key.
+* Initial support for lower led bar on the front of the machine.
 
 ### Building
 
