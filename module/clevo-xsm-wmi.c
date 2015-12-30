@@ -1,10 +1,11 @@
 /*
  * clevo-xsm-wmi.c
  *
- * Copyright (C) 2014 Arnoud Willemsen <mail@lynthium.com>
+ * Copyright (C) 2014-2015 Arnoud Willemsen <mail@lynthium.com>
  *
- * Based on tuxedo-wmi by Christoph Jaeger
- * Copyright (C) 2013-2014 Christoph Jaeger <cj@linux.com>
+ * Based on tuxedo-wmi by TUXEDO Computers GmbH
+ * Copyright (C) 2013-2015 TUXEDO Computers GmbH <tux@tuxedocomputers.com>
+ * Custom build Linux Notebooks and Computers: www.tuxedocomputers.com
  *
  * This program is free software;  you can redistribute it and/or modify
  * it under the terms of the  GNU General Public License as published by
