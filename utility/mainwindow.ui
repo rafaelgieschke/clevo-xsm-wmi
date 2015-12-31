@@ -237,6 +237,29 @@
      <string>Right side</string>
     </property>
    </widget>
+   <widget class="QComboBox" name="selectLower">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>160</y>
+      <width>131</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelLowerColor">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>140</y>
+      <width>90</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Lower front bar</string>
+    </property>
+   </widget>
    <widget class="QPushButton" name="buttonApply">
     <property name="geometry">
      <rect>

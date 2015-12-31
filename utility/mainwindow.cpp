@@ -28,9 +28,16 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->selectLeft->addItem(kb_colors[j].name);
         ui->selectCenter->addItem(kb_colors[j].name);
         ui->selectRight->addItem(kb_colors[j].name);
+        ui->selectLower->addItem(kb_colors[j].name);
     }
 
     readKeyboardValues();
+
+    if(has_lower == false) {
+        ui->selectLower->hide();
+        ui->labelLowerColor->hide();
+    }
+
     MainWindow::updateUI();
 }
 
@@ -80,9 +87,10 @@ void MainWindow::updateUI() {
             break;
     }
 
-    ui->selectLeft->setCurrentIndex(keyboard_settings.color_l);
-    ui->selectCenter->setCurrentIndex(keyboard_settings.color_c);
-    ui->selectRight->setCurrentIndex(keyboard_settings.color_r);
+    ui->selectLeft->setCurrentIndex(keyboard_settings.color_left);
+    ui->selectCenter->setCurrentIndex(keyboard_settings.color_center);
+    ui->selectRight->setCurrentIndex(keyboard_settings.color_right);
+    ui->selectLower->setCurrentIndex(keyboard_settings.color_lower);
 }
 
 void MainWindow::on_slider_brightness_valueChanged(int value) {
@@ -124,13 +132,17 @@ void MainWindow::on_radio_flash_clicked(bool checked) {
 
 void MainWindow::on_selectLeft_currentIndexChanged(int index) {
     if(index >= 0 && index <= COLORS_AMOUNT)
-        keyboard_settings.color_l = index;
+        keyboard_settings.color_left = index;
 }
 void MainWindow::on_selectCenter_currentIndexChanged(int index) {
     if(index >= 0 && index <= COLORS_AMOUNT)
-        keyboard_settings.color_c = index;
+        keyboard_settings.color_center = index;
 }
 void MainWindow::on_selectRight_currentIndexChanged(int index) {
     if(index >= 0 && index <= COLORS_AMOUNT)
-        keyboard_settings.color_r = index;
+        keyboard_settings.color_right = index;
+}
+void MainWindow::on_selectLower_currentIndexChanged(int index) {
+    if(index >= 0 && index <= COLORS_AMOUNT)
+        keyboard_settings.color_lower = index;
 }

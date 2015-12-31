@@ -70,16 +70,21 @@ private slots:
 
     void on_selectRight_currentIndexChanged(int index);
 
+    void on_selectLower_currentIndexChanged(int index);
+
 private:
     Ui::MainWindow *ui;
 };
 
+extern bool has_lower;
+
 struct keyboard_s {
     int brightness;
     int mode;
-    int color_l;
-    int color_c;
-    int color_r;
+    int color_left;
+    int color_center;
+    int color_right;
+    int color_lower;
 };
 extern keyboard_s keyboard_settings;
 
