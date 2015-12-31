@@ -1,45 +1,45 @@
 What:			/sys/devices/platform/clevo_xsm_wmi/kb_state
 Date:			June 2014
 Contact:		Arnoud Willemsen <mail@lynthium.com>
-Description:	A non-persistant integer with a range from 0 to 1.
-				When read this value returns wether the keyboard backlighting is
-				on or off.
+Description:	A non-persistent integer with a range from 0 to 1.
+				When read this value returns whether the keyboard backlighting
+                is on or off.
 				Writing a value of 1 or 0 will turn the backlighting on or off.
 				This value resets when the module is inserted during boot or
-				after manual invervention.
+				after manual intervention.
 
 What:			/sys/devices/platform/clevo_xsm_wmi/kb_brightness
 Date:			June 2014
 Contact:		Arnoud Willemsen <mail@lynthium.com>
-Description:	A non-persistant integer with a range from 0 to 10.
+Description:	A non-persistent integer with a range from 0 to 10.
 				When read this value returns the brightness of the backlighting
 				on a range from 0 to 10. With 0 being off and 10 being fully lit.
 				Writing a value in the range of 0 to 10 adjust the brightness of
 				the backlighting.
 				This value resets when the module is inserted during boot or
-				after manual invervention.
+				after manual intervention.
 
 What:			/sys/devices/platform/clevo_xsm_wmi/kb_mode
 Date:			June 2014
 Contact:		Arnoud Willemsen <mail@lynthium.com>
-Description:	A non-persistant integer with a range from 0 to 7.
+Description:	A non-persistent integer with a range from 0 to 7.
 				When read this value returns the current mode of the keyboard
 				backlighting as defined in the source under "kb_mode modes[]".
 				Writing a value in the range of 0 to 7 changes the mode of the
 				keyboard backlighting.
 				This value resets when the module is inserted during boot or
-				after manual invervention.
+				after manual intervention.
 
 What:			/sys/devices/platform/clevo_xsm_wmi/kb_color
-Date:			June 2014
+Date:			December 2015
 Contact:		Arnoud Willemsen <mail@lynthium.com>
-Description:	A non-persistant string.
+Description:	A non-persistent string.
 				When read this value returns the backlight color of the left,
-				center and right parts of the keyboard.
-				Writing a single color value will set the color for all three
-				parts of the keyboard. Writing three color values, seperated by
-				spaces, will set the color of each part individually.
+				center, right and lower parts of the keyboard.
+				Writing a single color value will set the color for all parts
+                of the keyboard. Writing color values, separated by spaces,
+                will set the color of each part individually.
 				Accepted colors are: black, blue, red, magenta, green, cyan,
 				yellow and white.
 				This value resets when the module is inserted during boot or
-				after manual invervention.
+				after manual intervention.
