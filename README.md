@@ -1,7 +1,7 @@
 # clevo-xsm-wmi
 
 Kernel module for keyboard backlighting of Clevo SM series notebooks.
-(And the P150EM, P720ZM, P750DM(-G), P770DM(-G) models)
+(And the P150EM, P750ZM, P750DM(-G), P770DM(-G) models)
 
 Based upon tuxedo-wmi, created by TUXEDO Computers GmbH.
 http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
