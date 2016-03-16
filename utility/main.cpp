@@ -120,6 +120,19 @@ void readKeyboardValues() {
         msgBox.setIcon(QMessageBox::Critical);
         msgBox.exec();
     }
+    /* State */
+    QFile fd_state("/sys/devices/platform/clevo_xsm_wmi/kb_state");
+    if(fd_state.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QByteArray line = fd_state.readAll();
+        int value = line.at(0) - 48;
+        keyboard_settings.state = (value == 1 ? 1 : 0);
+        fd_state.close();
+    } else {
+        QMessageBox msgBox;
+        msgBox.setText("Failed to read state");
+        msgBox.setIcon(QMessageBox::Critical);
+        msgBox.exec();
+    }
 }
 
 void setKeyboardValues() {
@@ -159,6 +172,17 @@ void setKeyboardValues() {
         msgBox.setIcon(QMessageBox::Critical);
         msgBox.exec();
     }
+    QFile fd_state("/sys/devices/platform/clevo_xsm_wmi/kb_state");
+    if(fd_state.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&fd_state);
+        out << keyboard_settings.state;
+        fd_state.close();
+    } else {
+        QMessageBox msgBox;
+        msgBox.setText("Failed to set state");
+        msgBox.setIcon(QMessageBox::Critical);
+        msgBox.exec();
+    }
 }
 
 void saveKeyboardSettings() {
@@ -175,6 +199,7 @@ void saveKeyboardSettings() {
         settings.setValue("kb_color_center", kb_colors[keyboard_settings.color_center].name);
         settings.setValue("kb_color_right", kb_colors[keyboard_settings.color_right].name);
         settings.setValue("kb_color_lower", kb_colors[keyboard_settings.color_lower].name);
+        settings.setValue("kb_state", keyboard_settings.state);
 
         settings.endGroup();
     }
@@ -189,6 +214,7 @@ void restoreKeyboardSettings() {
 
         keyboard_settings.brightness = settings.value("kb_brightness").toInt();
         keyboard_settings.mode       = settings.value("kb_mode").toInt();
+        keyboard_settings.state      = settings.value("kb_state").toInt();
 
         QByteArray bcolor_left      = settings.value("kb_color_left").toString().toUtf8();
         const char* color_left      = bcolor_left.constData();

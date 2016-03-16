@@ -91,6 +91,7 @@ void MainWindow::updateUI() {
     ui->selectCenter->setCurrentIndex(keyboard_settings.color_center);
     ui->selectRight->setCurrentIndex(keyboard_settings.color_right);
     ui->selectLower->setCurrentIndex(keyboard_settings.color_lower);
+    ui->stateCheckBox->setChecked(keyboard_settings.state == 1);
 }
 
 void MainWindow::on_slider_brightness_valueChanged(int value) {
@@ -145,4 +146,11 @@ void MainWindow::on_selectRight_currentIndexChanged(int index) {
 void MainWindow::on_selectLower_currentIndexChanged(int index) {
     if(index >= 0 && index <= COLORS_AMOUNT)
         keyboard_settings.color_lower = index;
+}
+
+void MainWindow::on_stateCheckBox_clicked(bool checked) {
+    if (checked)
+        keyboard_settings.state = 1;
+    else
+        keyboard_settings.state = 0;
 }
