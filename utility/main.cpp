@@ -24,7 +24,7 @@
 #include <getopt.h>
 
 keyboard_s keyboard_settings;
-bool has_lower = true;
+bool has_extra = true;
 
 #undef C
 #define C(n) { .name = #n }
@@ -96,10 +96,10 @@ void readKeyboardValues() {
     QFile fd_color("/sys/devices/platform/clevo_xsm_wmi/kb_color");
     if(fd_color.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QByteArray line = fd_color.readAll();
-        char left[8], right[8], center[8], lower[8];
-        int i = sscanf(line, "%7s %7s %7s %7s", left, center, right, lower);
+        char left[8], right[8], center[8], extra[8];
+        int i = sscanf(line, "%7s %7s %7s %7s", left, center, right, extra);
         if(i == 3)
-            has_lower = false;
+            has_extra = false;
         if(i == 3 || i == 4) {
             for (unsigned int j = 0;
                 j < (sizeof(kb_colors) / sizeof((kb_colors)[0])); j++) {
@@ -109,8 +109,8 @@ void readKeyboardValues() {
                     keyboard_settings.color_center = j;
                 if (!strcmp(right, kb_colors[j].name))
                     keyboard_settings.color_right = j;
-                if (!strcmp(lower, kb_colors[j].name))
-                    keyboard_settings.color_lower = j;
+                if (!strcmp(extra, kb_colors[j].name))
+                    keyboard_settings.color_extra = j;
             }
         }
         fd_color.close();
@@ -164,7 +164,7 @@ void setKeyboardValues() {
         out << kb_colors[keyboard_settings.color_left].name
             << " " << kb_colors[keyboard_settings.color_center].name
             << " " << kb_colors[keyboard_settings.color_right].name
-            << " " << kb_colors[keyboard_settings.color_lower].name;
+            << " " << kb_colors[keyboard_settings.color_extra].name;
         fd_color.close();
     } else {
         QMessageBox msgBox;
@@ -198,7 +198,7 @@ void saveKeyboardSettings() {
         settings.setValue("kb_color_left", kb_colors[keyboard_settings.color_left].name);
         settings.setValue("kb_color_center", kb_colors[keyboard_settings.color_center].name);
         settings.setValue("kb_color_right", kb_colors[keyboard_settings.color_right].name);
-        settings.setValue("kb_color_lower", kb_colors[keyboard_settings.color_lower].name);
+        settings.setValue("kb_color_extra", kb_colors[keyboard_settings.color_extra].name);
         settings.setValue("kb_state", keyboard_settings.state);
 
         settings.endGroup();
@@ -222,8 +222,8 @@ void restoreKeyboardSettings() {
         const char* color_center    = bcolor_center.constData();
         QByteArray bcolor_right     = settings.value("kb_color_right").toString().toUtf8();
         const char* color_right     = bcolor_right.constData();
-        QByteArray bcolor_lower     = settings.value("kb_color_lower").toString().toUtf8();
-        const char* color_lower     = bcolor_lower.constData();
+        QByteArray bcolor_extra     = settings.value("kb_color_extra").toString().toUtf8();
+        const char* color_extra     = bcolor_extra.constData();
 
         for (unsigned int j = 0;
             j < (sizeof(kb_colors) / sizeof((kb_colors)[0])); j++) {
@@ -233,8 +233,8 @@ void restoreKeyboardSettings() {
                 keyboard_settings.color_center = j;
             if (!strcmp(color_right, kb_colors[j].name))
                 keyboard_settings.color_right = j;
-            if (!strcmp(color_lower, kb_colors[j].name))
-                keyboard_settings.color_lower = j;
+            if (!strcmp(color_extra, kb_colors[j].name))
+                keyboard_settings.color_extra = j;
         }
 
         settings.endGroup();

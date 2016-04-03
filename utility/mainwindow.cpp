@@ -28,14 +28,14 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->selectLeft->addItem(kb_colors[j].name);
         ui->selectCenter->addItem(kb_colors[j].name);
         ui->selectRight->addItem(kb_colors[j].name);
-        ui->selectLower->addItem(kb_colors[j].name);
+        ui->selectExtra->addItem(kb_colors[j].name);
     }
 
     readKeyboardValues();
 
-    if(has_lower == false) {
-        ui->selectLower->hide();
-        ui->labelLowerColor->hide();
+    if(has_extra == false) {
+        ui->selectExtra->hide();
+        ui->labelExtraColor->hide();
     }
 
     MainWindow::updateUI();
@@ -90,7 +90,7 @@ void MainWindow::updateUI() {
     ui->selectLeft->setCurrentIndex(keyboard_settings.color_left);
     ui->selectCenter->setCurrentIndex(keyboard_settings.color_center);
     ui->selectRight->setCurrentIndex(keyboard_settings.color_right);
-    ui->selectLower->setCurrentIndex(keyboard_settings.color_lower);
+    ui->selectExtra->setCurrentIndex(keyboard_settings.color_extra);
     ui->stateCheckBox->setChecked(keyboard_settings.state == 1);
 }
 
@@ -143,9 +143,9 @@ void MainWindow::on_selectRight_currentIndexChanged(int index) {
     if(index >= 0 && index <= COLORS_AMOUNT)
         keyboard_settings.color_right = index;
 }
-void MainWindow::on_selectLower_currentIndexChanged(int index) {
+void MainWindow::on_selectExtra_currentIndexChanged(int index) {
     if(index >= 0 && index <= COLORS_AMOUNT)
-        keyboard_settings.color_lower = index;
+        keyboard_settings.color_extra = index;
 }
 
 void MainWindow::on_stateCheckBox_clicked(bool checked) {

@@ -237,7 +237,7 @@
      <string>Right side</string>
     </property>
    </widget>
-   <widget class="QComboBox" name="selectLower">
+   <widget class="QComboBox" name="selectExtra">
     <property name="geometry">
      <rect>
       <x>450</x>
@@ -247,7 +247,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="labelLowerColor">
+   <widget class="QLabel" name="labelExtraColor">
     <property name="geometry">
      <rect>
       <x>450</x>
@@ -257,7 +257,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Lower front bar</string>
+     <string>Extra</string>
     </property>
    </widget>
    <widget class="QPushButton" name="buttonApply">
