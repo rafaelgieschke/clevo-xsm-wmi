@@ -38,6 +38,13 @@ $ sudo install -Dm755 clevo-xsm-wmi /usr/bin/clevo-xsm-wmi
 $ sudo install -Dm755 systemd/clevo-xsm-wmi.service /usr/lib/systemd/system/clevo-xsm-wmi.service
 ```
 
+### Usage
+
+Adjusting keyboard settings:
+```bash
+$ sudo clevo-xsm-wmi
+```
+
 Restoring state during boot:
 ```bash
 # With the module:
@@ -58,13 +65,15 @@ Arch Linux: [Module](https://aur.archlinux.org/packages/clevo-xsm-wmi/) [DKMS](h
 
 ### Common issues
 
-* 'Can't read private key' during 'make install'
+* 'Can't read private key' during 'make install'.
+
 This is a common issue on Ubuntu as the module isn't signed so manual install is required.
 ```bash
 $ sudo install -m644 clevo-xsm-wmi.ko /lib/modules/$(uname -r)/extra
 $ sudo depmod
 ```
 * Module installed but not loaded during boot.
+
 Specify that the module should be loaded just in case.
 ```bash
 $ sudo tee /etc/modules-load.d/clevo-xsm-wmi.conf <<< clevo-xsm-wmi
