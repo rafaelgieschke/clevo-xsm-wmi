@@ -1239,7 +1239,7 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "P17SM-A"),
 		},
 		.callback = clevo_xsm_dmi_matched,
-		.driver_data = &kb_full_color_ops,
+		.driver_data = &kb_full_color_with_lower_ops,
 	},
 	{
 		.ident = "Clevo P15SM1-A",
