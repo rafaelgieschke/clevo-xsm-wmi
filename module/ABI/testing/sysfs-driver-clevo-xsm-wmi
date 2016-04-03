@@ -35,10 +35,10 @@ Date:			December 2015
 Contact:		Arnoud Willemsen <mail@lynthium.com>
 Description:	A non-persistent string.
 				When read this value returns the backlight color of the left,
-				center, right and lower parts of the keyboard.
-				Writing a single color value will set the color for all parts
-                of the keyboard. Writing color values, separated by spaces,
-                will set the color of each part individually.
+				center, right and extra (lower bar/touchpad) parts of the
+                keyboard. Writing a single color value will set the color for
+                all parts of the keyboard. Writing color values, separated by 
+                spaces, will set the color of each part individually.
 				Accepted colors are: black, blue, red, magenta, green, cyan,
 				yellow and white.
 				This value resets when the module is inserted during boot or
