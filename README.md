@@ -1,7 +1,7 @@
 # clevo-xsm-wmi
 
 Kernel module for keyboard backlighting of Clevo SM series notebooks.
-(And the P150EM, P750ZM, P750DM(-G), P770DM(-G) models)
+(And several EM/ZM/DM series models)
 
 Based upon tuxedo-wmi, created by TUXEDO Computers GmbH.
 http://www.linux-onlineshop.de/forum/index.php?page=Thread&threadID=26
@@ -53,10 +53,11 @@ $ sudo tee /etc/modprobe.d/clevo-xsm-wmi.conf <<< options clevo-xsm-wmi kb_color
 
 # With systemd:
 $ sudo systemctl enable clevo-xsm-service
+$ sudo systemctl start clevo-xsm-service
 
 # With others:
-# run '/usr/bin/clevo-xsm-wmi -r' at boot to restore state
-# run '/usr/bin/clevo-xsm-wmi -s' at shutdown/change to save state
+run '/usr/bin/clevo-xsm-wmi -r' at boot to restore state
+run '/usr/bin/clevo-xsm-wmi -s' at shutdown/change to save state
 ```
 
 ### Distributions
