@@ -1242,11 +1242,47 @@ clevo_hwmon_show_fan2_label(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "GPU fan\n");
 }
 
+static ssize_t
+clevo_hwmon_show_temp1_input(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	u8 value;
+	ec_read(0x07, &value);
+	return sprintf(buf, "%i\n", value * 1000);
+}
+
+static ssize_t
+clevo_hwmon_show_temp1_label(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "CPU temperature\n");
+}
+
+static ssize_t
+clevo_hwmon_show_temp2_input(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	u8 value;
+	ec_read(0xcd, &value);
+	return sprintf(buf, "%i\n", value * 1000);
+}
+
+static ssize_t
+clevo_hwmon_show_temp2_label(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "GPU temperature\n");
+}
+
 static SENSOR_DEVICE_ATTR(name, S_IRUGO, clevo_hwmon_show_name, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, clevo_hwmon_show_fan1_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan1_label, S_IRUGO, clevo_hwmon_show_fan1_label, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan2_input, S_IRUGO, clevo_hwmon_show_fan2_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan2_label, S_IRUGO, clevo_hwmon_show_fan2_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, clevo_hwmon_show_temp1_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp1_label, S_IRUGO, clevo_hwmon_show_temp1_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp2_input, S_IRUGO, clevo_hwmon_show_temp2_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp2_label, S_IRUGO, clevo_hwmon_show_temp2_label, NULL, 0);
 
 static struct attribute *hwmon_default_attributes[] = {
 	&sensor_dev_attr_name.dev_attr.attr,
@@ -1254,6 +1290,10 @@ static struct attribute *hwmon_default_attributes[] = {
 	&sensor_dev_attr_fan1_label.dev_attr.attr,
 	&sensor_dev_attr_fan2_input.dev_attr.attr,
 	&sensor_dev_attr_fan2_label.dev_attr.attr,
+	&sensor_dev_attr_temp1_input.dev_attr.attr,
+	&sensor_dev_attr_temp1_label.dev_attr.attr,
+	&sensor_dev_attr_temp2_input.dev_attr.attr,
+	&sensor_dev_attr_temp2_label.dev_attr.attr,
 	NULL
 };
 
