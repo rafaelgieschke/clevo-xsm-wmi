@@ -1193,6 +1193,20 @@ struct clevo_hwmon {
 
 static struct clevo_hwmon *clevo_hwmon = NULL;
 
+static int
+clevo_read_fan(int idx)
+{
+	u8 value;
+	int raw_rpm;
+	ec_read(0xd0 + 0x2 * idx, &value);
+	raw_rpm = value << 8;
+	ec_read(0xd1 + 0x2 * idx, &value);
+	raw_rpm += value;
+	if (!raw_rpm)
+		return 0;
+	return 2156220 / raw_rpm;
+}
+
 static ssize_t
 clevo_hwmon_show_name(struct device *dev, struct device_attribute *attr,
 		      char *buf)
@@ -1200,10 +1214,46 @@ clevo_hwmon_show_name(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, CLEVO_XSM_DRIVER_NAME "\n");
 }
 
+static ssize_t
+clevo_hwmon_show_fan1_input(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "%i\n", clevo_read_fan(0));
+}
+
+static ssize_t
+clevo_hwmon_show_fan1_label(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "CPU fan\n");
+}
+
+static ssize_t
+clevo_hwmon_show_fan2_input(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "%i\n", clevo_read_fan(1));
+}
+
+static ssize_t
+clevo_hwmon_show_fan2_label(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "GPU fan\n");
+}
+
 static SENSOR_DEVICE_ATTR(name, S_IRUGO, clevo_hwmon_show_name, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, clevo_hwmon_show_fan1_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan1_label, S_IRUGO, clevo_hwmon_show_fan1_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan2_input, S_IRUGO, clevo_hwmon_show_fan2_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan2_label, S_IRUGO, clevo_hwmon_show_fan2_label, NULL, 0);
 
 static struct attribute *hwmon_default_attributes[] = {
 	&sensor_dev_attr_name.dev_attr.attr,
+	&sensor_dev_attr_fan1_input.dev_attr.attr,
+	&sensor_dev_attr_fan1_label.dev_attr.attr,
+	&sensor_dev_attr_fan2_input.dev_attr.attr,
+	&sensor_dev_attr_fan2_label.dev_attr.attr,
 	NULL
 };
 
