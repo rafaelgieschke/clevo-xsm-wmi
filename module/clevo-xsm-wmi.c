@@ -1218,14 +1218,6 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 		.driver_data = &kb_full_color_with_extra_ops,
 	},
 	{
-		.ident = "Clevo P750ZM",
-		.matches = {
-			DMI_MATCH(DMI_PRODUCT_NAME, "P5 Pro SE"),
-		},
-		.callback = clevo_xsm_dmi_matched,
-		.driver_data = &kb_full_color_with_extra_ops,
-	},
-	{
 		.ident = "Clevo P370SM-A",
 		.matches = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "P370SM-A"),
@@ -1280,6 +1272,24 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 		},
 		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_8_color_ops,
+	},
+	/* Ones that don't follow the 'standard' product names above */
+	{
+		.ident = "Clevo P750ZM",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "P5 Pro SE"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_with_extra_ops,
+	},
+	{
+		.ident = "Clevo P750ZM",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "ECT"),
+			DMI_MATCH(DMI_BOARD_NAME, "P750ZM"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_with_extra_ops,
 	},
 	{
 		/* terminating NULL entry */
