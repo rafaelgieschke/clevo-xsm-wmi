@@ -27,6 +27,8 @@
 #include <linux/acpi.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/hwmon.h>
+#include <linux/hwmon-sysfs.h>
 #include <linux/input.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>
@@ -49,6 +51,8 @@
 #define CLEVO_EVENT_GUID  "ABBC0F6B-8EA1-11D1-00A0-C90629100000"
 #define CLEVO_EMAIL_GUID  "ABBC0F6C-8EA1-11D1-00A0-C90629100000"
 #define CLEVO_GET_GUID    "ABBC0F6D-8EA1-11D1-00A0-C90629100000"
+
+#define CLEVO_HAS_HWMON (defined(CONFIG_HWMON) || (defined(MODULE) && defined(CONFIG_HWMON_MODULE)))
 
 /* method IDs for CLEVO_GET */
 #define GET_EVENT               0x01  /*   1 */
@@ -1182,6 +1186,154 @@ static ssize_t clevo_xsm_color_store(struct device *child,
 static DEVICE_ATTR(kb_color, 0644,
 	clevo_xsm_color_show, clevo_xsm_color_store);
 
+#if CLEVO_HAS_HWMON
+struct clevo_hwmon {
+	struct device *dev;
+};
+
+static struct clevo_hwmon *clevo_hwmon = NULL;
+
+static int
+clevo_read_fan(int idx)
+{
+	u8 value;
+	int raw_rpm;
+	ec_read(0xd0 + 0x2 * idx, &value);
+	raw_rpm = value << 8;
+	ec_read(0xd1 + 0x2 * idx, &value);
+	raw_rpm += value;
+	if (!raw_rpm)
+		return 0;
+	return 2156220 / raw_rpm;
+}
+
+static ssize_t
+clevo_hwmon_show_name(struct device *dev, struct device_attribute *attr,
+		      char *buf)
+{
+	return sprintf(buf, CLEVO_XSM_DRIVER_NAME "\n");
+}
+
+static ssize_t
+clevo_hwmon_show_fan1_input(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "%i\n", clevo_read_fan(0));
+}
+
+static ssize_t
+clevo_hwmon_show_fan1_label(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "CPU fan\n");
+}
+
+static ssize_t
+clevo_hwmon_show_fan2_input(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "%i\n", clevo_read_fan(1));
+}
+
+static ssize_t
+clevo_hwmon_show_fan2_label(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "GPU fan\n");
+}
+
+static ssize_t
+clevo_hwmon_show_temp1_input(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	u8 value;
+	ec_read(0x07, &value);
+	return sprintf(buf, "%i\n", value * 1000);
+}
+
+static ssize_t
+clevo_hwmon_show_temp1_label(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "CPU temperature\n");
+}
+
+static ssize_t
+clevo_hwmon_show_temp2_input(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	u8 value;
+	ec_read(0xcd, &value);
+	return sprintf(buf, "%i\n", value * 1000);
+}
+
+static ssize_t
+clevo_hwmon_show_temp2_label(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sprintf(buf, "GPU temperature\n");
+}
+
+static SENSOR_DEVICE_ATTR(name, S_IRUGO, clevo_hwmon_show_name, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, clevo_hwmon_show_fan1_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan1_label, S_IRUGO, clevo_hwmon_show_fan1_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan2_input, S_IRUGO, clevo_hwmon_show_fan2_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan2_label, S_IRUGO, clevo_hwmon_show_fan2_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, clevo_hwmon_show_temp1_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp1_label, S_IRUGO, clevo_hwmon_show_temp1_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp2_input, S_IRUGO, clevo_hwmon_show_temp2_input, NULL, 0);
+static SENSOR_DEVICE_ATTR(temp2_label, S_IRUGO, clevo_hwmon_show_temp2_label, NULL, 0);
+
+static struct attribute *hwmon_default_attributes[] = {
+	&sensor_dev_attr_name.dev_attr.attr,
+	&sensor_dev_attr_fan1_input.dev_attr.attr,
+	&sensor_dev_attr_fan1_label.dev_attr.attr,
+	&sensor_dev_attr_fan2_input.dev_attr.attr,
+	&sensor_dev_attr_fan2_label.dev_attr.attr,
+	&sensor_dev_attr_temp1_input.dev_attr.attr,
+	&sensor_dev_attr_temp1_label.dev_attr.attr,
+	&sensor_dev_attr_temp2_input.dev_attr.attr,
+	&sensor_dev_attr_temp2_label.dev_attr.attr,
+	NULL
+};
+
+static const struct attribute_group hwmon_default_attrgroup = {
+	.attrs = hwmon_default_attributes,
+};
+
+static int
+clevo_hwmon_init(struct device *dev)
+{
+	int ret;
+
+	clevo_hwmon = kzalloc(sizeof(*clevo_hwmon), GFP_KERNEL);
+	if (!clevo_hwmon)
+		return -ENOMEM;
+	clevo_hwmon->dev = hwmon_device_register(dev);
+	if (IS_ERR(clevo_hwmon->dev)) {
+		ret = PTR_ERR(clevo_hwmon->dev);
+		clevo_hwmon->dev = NULL;
+		return ret;
+	}
+
+	ret = sysfs_create_group(&clevo_hwmon->dev->kobj, &hwmon_default_attrgroup);
+	if (ret)
+		return ret;
+	return 0;
+}
+
+static int
+clevo_hwmon_fini(struct device *dev)
+{
+	if (!clevo_hwmon || !clevo_hwmon->dev)
+		return 0;
+	sysfs_remove_group(&clevo_hwmon->dev->kobj, &hwmon_default_attrgroup);
+	hwmon_device_unregister(clevo_hwmon->dev);
+	kfree(clevo_hwmon);
+	return 0;
+}
+#endif // CLEVO_HAS_HWMON
+
 /* dmi & init & exit */
 
 static int __init clevo_xsm_dmi_matched(const struct dmi_system_id *id)
@@ -1357,6 +1509,10 @@ static int __init clevo_xsm_init(void)
 		&dev_attr_kb_color) != 0)
 		CLEVO_XSM_ERROR("Sysfs attribute creation failed for color\n");
 
+#ifdef CLEVO_HAS_HWMON
+	clevo_hwmon_init(&clevo_xsm_platform_device->dev);
+#endif
+
 	return 0;
 }
 
@@ -1366,6 +1522,9 @@ static void __exit clevo_xsm_exit(void)
 	clevo_xsm_input_exit();
 	clevo_xsm_rfkill_exit();
 
+#ifdef CLEVO_HAS_HWMON
+	clevo_hwmon_fini(&clevo_xsm_platform_device->dev);
+#endif
 	device_remove_file(&clevo_xsm_platform_device->dev,
 		&dev_attr_kb_brightness);
 	device_remove_file(&clevo_xsm_platform_device->dev, &dev_attr_kb_state);
