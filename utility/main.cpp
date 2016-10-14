@@ -34,27 +34,27 @@ kbcolors_s kb_colors[] = COLORS;
 
 int main(int argc, char *argv[]) {
     int opt = 0;
-
     while ((opt = getopt(argc, argv, "sr")) != -1) {
         switch(opt) {
             case 's':
                     saveKeyboardSettings();
-                    return 0;
                     break;
             case 'r':
                     restoreKeyboardSettings();
-                    return 0;
                     break;
         }
     }
 
+    if(!opt) {
+        QApplication a(argc, argv);
+        MainWindow w;
 
-    QApplication a(argc, argv);
-    MainWindow w;
+        w.show();
 
-    w.show();
+        return a.exec();
+    }
 
-    return a.exec();
+    return 0;
 }
 
 void readKeyboardValues() {
