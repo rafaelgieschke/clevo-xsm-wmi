@@ -1,7 +1,7 @@
 /*
  * clevo-xsm-wmi.c
  *
- * Copyright (C) 2014-2015 Arnoud Willemsen <mail@lynthium.com>
+ * Copyright (C) 2014-2016 Arnoud Willemsen <mail@lynthium.com>
  *
  * Based on tuxedo-wmi by TUXEDO Computers GmbH
  * Copyright (C) 2013-2015 TUXEDO Computers GmbH <tux@tuxedocomputers.com>
@@ -1209,42 +1209,44 @@ clevo_read_fan(int idx)
 
 static ssize_t
 clevo_hwmon_show_name(struct device *dev, struct device_attribute *attr,
-		      char *buf)
+			  char *buf)
 {
 	return sprintf(buf, CLEVO_XSM_DRIVER_NAME "\n");
 }
 
 static ssize_t
 clevo_hwmon_show_fan1_input(struct device *dev, struct device_attribute *attr,
-			    char *buf)
+				char *buf)
 {
 	return sprintf(buf, "%i\n", clevo_read_fan(0));
 }
 
 static ssize_t
 clevo_hwmon_show_fan1_label(struct device *dev, struct device_attribute *attr,
-			    char *buf)
+				char *buf)
 {
 	return sprintf(buf, "CPU fan\n");
 }
 
+#ifdef EXPERIMENTAL
 static ssize_t
 clevo_hwmon_show_fan2_input(struct device *dev, struct device_attribute *attr,
-			    char *buf)
+				char *buf)
 {
 	return sprintf(buf, "%i\n", clevo_read_fan(1));
 }
 
 static ssize_t
 clevo_hwmon_show_fan2_label(struct device *dev, struct device_attribute *attr,
-			    char *buf)
+				char *buf)
 {
 	return sprintf(buf, "GPU fan\n");
 }
+#endif
 
 static ssize_t
 clevo_hwmon_show_temp1_input(struct device *dev, struct device_attribute *attr,
-			     char *buf)
+				 char *buf)
 {
 	u8 value;
 	ec_read(0x07, &value);
@@ -1253,14 +1255,15 @@ clevo_hwmon_show_temp1_input(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 clevo_hwmon_show_temp1_label(struct device *dev, struct device_attribute *attr,
-			     char *buf)
+				 char *buf)
 {
 	return sprintf(buf, "CPU temperature\n");
 }
 
+#ifdef EXPERIMENTAL
 static ssize_t
 clevo_hwmon_show_temp2_input(struct device *dev, struct device_attribute *attr,
-			     char *buf)
+				 char *buf)
 {
 	u8 value;
 	ec_read(0xcd, &value);
@@ -1269,31 +1272,40 @@ clevo_hwmon_show_temp2_input(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 clevo_hwmon_show_temp2_label(struct device *dev, struct device_attribute *attr,
-			     char *buf)
+				 char *buf)
 {
 	return sprintf(buf, "GPU temperature\n");
 }
+#endif
 
 static SENSOR_DEVICE_ATTR(name, S_IRUGO, clevo_hwmon_show_name, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, clevo_hwmon_show_fan1_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan1_label, S_IRUGO, clevo_hwmon_show_fan1_label, NULL, 0);
+#ifdef EXPERIMENTAL
 static SENSOR_DEVICE_ATTR(fan2_input, S_IRUGO, clevo_hwmon_show_fan2_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan2_label, S_IRUGO, clevo_hwmon_show_fan2_label, NULL, 0);
+#endif
 static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, clevo_hwmon_show_temp1_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(temp1_label, S_IRUGO, clevo_hwmon_show_temp1_label, NULL, 0);
+#ifdef EXPERIMENTAL
 static SENSOR_DEVICE_ATTR(temp2_input, S_IRUGO, clevo_hwmon_show_temp2_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(temp2_label, S_IRUGO, clevo_hwmon_show_temp2_label, NULL, 0);
+#endif
 
 static struct attribute *hwmon_default_attributes[] = {
 	&sensor_dev_attr_name.dev_attr.attr,
 	&sensor_dev_attr_fan1_input.dev_attr.attr,
 	&sensor_dev_attr_fan1_label.dev_attr.attr,
+#ifdef EXPERIMENTAL
 	&sensor_dev_attr_fan2_input.dev_attr.attr,
 	&sensor_dev_attr_fan2_label.dev_attr.attr,
+#endif
 	&sensor_dev_attr_temp1_input.dev_attr.attr,
 	&sensor_dev_attr_temp1_label.dev_attr.attr,
+#ifdef EXPERIMENTAL
 	&sensor_dev_attr_temp2_input.dev_attr.attr,
 	&sensor_dev_attr_temp2_label.dev_attr.attr,
+#endif
 	NULL
 };
 
@@ -1451,14 +1463,22 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_full_color_with_extra_ops,
 	},
- 	{
+	{
 		.ident = "Clevo P65_67RSRP",
 		.matches = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "P65_67RSRP"),
 		},
 		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_full_color_ops,
-  	},
+	},
+	{
+		.ident = "Clevo P65xRP",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "P65xRP"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_ops,
+	},
 	{
 		.ident = "Clevo P150EM",
 		.matches = {
@@ -1565,4 +1585,4 @@ module_exit(clevo_xsm_exit);
 MODULE_AUTHOR("Arnoud Willemsen <mail@lynthium.com>");
 MODULE_DESCRIPTION("Clevo SM series laptop driver.");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.0.9");
+MODULE_VERSION("0.1.0");

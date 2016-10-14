@@ -1,7 +1,7 @@
 /*
  * This file is part of the clevo-xsm-wmi utility
  *
- * Copyright (C) 2014 Arnoud Willemsen <mail@lynthium.com>
+ * Copyright (C) 2014-2016 Arnoud Willemsen <mail@lynthium.com>
  *
  * This program is free software;  you can redistribute it and/or modify
  * it under the terms of the  GNU General Public License as published by
@@ -32,6 +32,25 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     readKeyboardValues();
+
+    ui->notifyFailure->hide();
+
+    if(keyboard_settings.mode == -1) {
+        ui->group_mode->hide();
+        ui->notifyFailure->show();
+    }
+    if(keyboard_settings.state == -1) {
+        ui->stateCheckBox->hide();
+        ui->notifyFailure->show();
+    }
+    if(keyboard_settings.color_left == -1) {
+        ui->group_color->hide();
+        ui->notifyFailure->show();
+    }
+    if(keyboard_settings.brightness == -1) {
+        ui->group_brightness->hide();
+        ui->notifyFailure->show();
+    }
 
     if(has_extra == false) {
         ui->selectExtra->hide();
