@@ -34,18 +34,21 @@ kbcolors_s kb_colors[] = COLORS;
 
 int main(int argc, char *argv[]) {
     int opt = 0;
+    bool onlySaveRestore = false;
     while ((opt = getopt(argc, argv, "sr")) != -1) {
         switch(opt) {
             case 's':
                     saveKeyboardSettings();
+                    onlySaveRestore = true;
                     break;
             case 'r':
                     restoreKeyboardSettings();
+                    onlySaveRestore = true;
                     break;
         }
     }
 
-    if(!opt) {
+    if(!onlySaveRestore) {
         QApplication a(argc, argv);
         MainWindow w;
 
