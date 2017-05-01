@@ -1,0 +1,6 @@
+#!/bin/sh
+NAME="clevo-xsm-wmi"
+sudo rmmod "$NAME"
+sudo dkms remove "$NAME"/0 --all
+sudo rm -r /usr/src/"$NAME"-0
+sudo rm /etc/modules-load.d/"$NAME".conf

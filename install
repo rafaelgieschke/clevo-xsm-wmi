@@ -1,0 +1,10 @@
+#!/bin/sh
+NAME="clevo-xsm-wmi"
+
+SOURCE="$(dirname "$(readlink -f "$0")")"
+sudo rmmod "$NAME"
+# sudo ln -sT "$SOURCE" /usr/src/"$NAME"-0
+sudo cp -rT "$SOURCE" /usr/src/"$NAME"-0
+sudo dkms install "$NAME"/0
+echo "$NAME" | sudo tee /etc/modules-load.d/"$NAME".conf
+sudo modprobe "$NAME"
