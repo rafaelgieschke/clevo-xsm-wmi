@@ -1207,6 +1207,25 @@ clevo_read_fan(int idx)
 	return 2156220 / raw_rpm;
 }
 
+static int
+clevo_read_pwm(int idx) {
+	u8 value;
+	ec_read(0xce + idx, &value);
+	return value;
+}
+
+static int
+clevo_write_pwm(int idx, u8 duty) {
+	u8 values[] = {idx + 1, duty};
+	return ec_transaction(0x99, values, sizeof(values), NULL, 0);
+}
+
+static int
+clevo_write_pwm_auto(int idx) {
+	u8 values[] = {0xff, idx + 1};
+	return ec_transaction(0x99, values, sizeof(values), NULL, 0);
+}
+
 static ssize_t
 clevo_hwmon_show_name(struct device *dev, struct device_attribute *attr,
 			  char *buf)
@@ -1228,6 +1247,68 @@ clevo_hwmon_show_fan1_label(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "CPU fan\n");
 }
 
+static int pwm1_enabled = 2;
+
+static ssize_t
+clevo_hwmon_show_pwm1(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%i\n", clevo_read_pwm(0));
+}
+
+static ssize_t
+clevo_hwmon_set_pwm1(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	u32 value;
+	int err;
+
+	err = kstrtou32(buf, 10, &value);
+	if (err) return err;
+	if (value > 255) return -EINVAL;
+	err = clevo_write_pwm(0, value);
+	if (err) return err;
+	pwm1_enabled = 1;
+	return count;
+}
+
+static ssize_t
+clevo_hwmon_show_pwm1_enable(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%i\n", pwm1_enabled);
+}
+
+static ssize_t
+clevo_hwmon_set_pwm1_enable(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	u32 value;
+	int err;
+
+	err = kstrtou32(buf, 10, &value);
+	if (err) return err;
+	if (value == 0) {
+		err = clevo_write_pwm(0, 255);
+		if (err) return err;
+		pwm1_enabled = value;
+		return count;
+	}
+	if (value == 1) {
+		err = clevo_write_pwm(0, 0);
+		if (err) return err;
+		pwm1_enabled = value;
+		return count;
+	}
+	if (value == 2) {
+		err = clevo_write_pwm_auto(0);
+		if (err) return err;
+		pwm1_enabled = value;
+		return count;
+	}
+	return -EINVAL;
+}
+
 #ifdef EXPERIMENTAL
 static ssize_t
 clevo_hwmon_show_fan2_input(struct device *dev, struct device_attribute *attr,
@@ -1241,6 +1322,68 @@ clevo_hwmon_show_fan2_label(struct device *dev, struct device_attribute *attr,
 				char *buf)
 {
 	return sprintf(buf, "GPU fan\n");
+}
+
+static int pwm2_enabled = 2;
+
+static ssize_t
+clevo_hwmon_show_pwm2(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%i\n", clevo_read_pwm(1));
+}
+
+static ssize_t
+clevo_hwmon_set_pwm2(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	u32 value;
+	int err;
+
+	err = kstrtou32(buf, 10, &value);
+	if (err) return err;
+	if (value > 255) return -EINVAL;
+	err = clevo_write_pwm(1, value);
+	if (err) return err;
+	pwm2_enabled = 1;
+	return count;
+}
+
+static ssize_t
+clevo_hwmon_show_pwm2_enable(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%i\n", pwm2_enabled);
+}
+
+static ssize_t
+clevo_hwmon_set_pwm2_enable(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	u32 value;
+	int err;
+
+	err = kstrtou32(buf, 10, &value);
+	if (err) return err;
+	if (value == 0) {
+		err = clevo_write_pwm(1, 255);
+		if (err) return err;
+		pwm2_enabled = value;
+		return count;
+	}
+	if (value == 1) {
+		err = clevo_write_pwm(1, 0);
+		if (err) return err;
+		pwm2_enabled = value;
+		return count;
+	}
+	if (value == 2) {
+		err = clevo_write_pwm_auto(1);
+		if (err) return err;
+		pwm2_enabled = value;
+		return count;
+	}
+	return -EINVAL;
 }
 #endif
 
@@ -1281,9 +1424,13 @@ clevo_hwmon_show_temp2_label(struct device *dev, struct device_attribute *attr,
 static SENSOR_DEVICE_ATTR(name, S_IRUGO, clevo_hwmon_show_name, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, clevo_hwmon_show_fan1_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan1_label, S_IRUGO, clevo_hwmon_show_fan1_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(pwm1, S_IRUGO |  S_IWUSR, clevo_hwmon_show_pwm1, clevo_hwmon_set_pwm1, 0);
+static SENSOR_DEVICE_ATTR(pwm1_enable, S_IRUGO |  S_IWUSR, clevo_hwmon_show_pwm1_enable, clevo_hwmon_set_pwm1_enable, 0);
 #ifdef EXPERIMENTAL
 static SENSOR_DEVICE_ATTR(fan2_input, S_IRUGO, clevo_hwmon_show_fan2_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan2_label, S_IRUGO, clevo_hwmon_show_fan2_label, NULL, 0);
+static SENSOR_DEVICE_ATTR(pwm2, S_IRUGO |  S_IWUSR, clevo_hwmon_show_pwm2, clevo_hwmon_set_pwm2, 0);
+static SENSOR_DEVICE_ATTR(pwm2_enable, S_IRUGO |  S_IWUSR, clevo_hwmon_show_pwm2_enable, clevo_hwmon_set_pwm2_enable, 0);
 #endif
 static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, clevo_hwmon_show_temp1_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(temp1_label, S_IRUGO, clevo_hwmon_show_temp1_label, NULL, 0);
@@ -1296,9 +1443,13 @@ static struct attribute *hwmon_default_attributes[] = {
 	&sensor_dev_attr_name.dev_attr.attr,
 	&sensor_dev_attr_fan1_input.dev_attr.attr,
 	&sensor_dev_attr_fan1_label.dev_attr.attr,
+	&sensor_dev_attr_pwm1.dev_attr.attr,
+	&sensor_dev_attr_pwm1_enable.dev_attr.attr,
 #ifdef EXPERIMENTAL
 	&sensor_dev_attr_fan2_input.dev_attr.attr,
 	&sensor_dev_attr_fan2_label.dev_attr.attr,
+	&sensor_dev_attr_pwm2.dev_attr.attr,
+	&sensor_dev_attr_pwm2_enable.dev_attr.attr,
 #endif
 	&sensor_dev_attr_temp1_input.dev_attr.attr,
 	&sensor_dev_attr_temp1_label.dev_attr.attr,
@@ -1331,6 +1482,11 @@ clevo_hwmon_init(struct device *dev)
 	ret = sysfs_create_group(&clevo_hwmon->dev->kobj, &hwmon_default_attrgroup);
 	if (ret)
 		return ret;
+
+	clevo_write_pwm_auto(0);
+	#ifdef EXPERIMENTAL
+		clevo_write_pwm_auto(1);
+	#endif
 	return 0;
 }
 
@@ -1339,6 +1495,10 @@ clevo_hwmon_fini(struct device *dev)
 {
 	if (!clevo_hwmon || !clevo_hwmon->dev)
 		return 0;
+	clevo_write_pwm_auto(0);
+	#ifdef EXPERIMENTAL
+		clevo_write_pwm_auto(1);
+	#endif
 	sysfs_remove_group(&clevo_hwmon->dev->kobj, &hwmon_default_attrgroup);
 	hwmon_device_unregister(clevo_hwmon->dev);
 	kfree(clevo_hwmon);
