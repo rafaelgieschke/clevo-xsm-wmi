@@ -35,7 +35,9 @@
 #include <linux/leds.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/notifier.h>
 #include <linux/platform_device.h>
+#include <linux/reboot.h>
 #include <linux/rfkill.h>
 #include <linux/stringify.h>
 #include <linux/version.h>
@@ -1464,6 +1466,19 @@ static const struct attribute_group hwmon_default_attrgroup = {
 	.attrs = hwmon_default_attributes,
 };
 
+static int clevo_hwmon_reboot_callback(struct notifier_block *nb,
+		unsigned long action, void *data) {
+	clevo_write_pwm_auto(0);
+	#ifdef EXPERIMENTAL
+		clevo_write_pwm_auto(1);
+	#endif
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block clevo_hwmon_reboot_notifier = {
+	.notifier_call = clevo_hwmon_reboot_callback
+};
+
 static int
 clevo_hwmon_init(struct device *dev)
 {
@@ -1483,6 +1498,7 @@ clevo_hwmon_init(struct device *dev)
 	if (ret)
 		return ret;
 
+	register_reboot_notifier(&clevo_hwmon_reboot_notifier);
 	clevo_write_pwm_auto(0);
 	#ifdef EXPERIMENTAL
 		clevo_write_pwm_auto(1);
@@ -1499,6 +1515,7 @@ clevo_hwmon_fini(struct device *dev)
 	#ifdef EXPERIMENTAL
 		clevo_write_pwm_auto(1);
 	#endif
+	unregister_reboot_notifier(&clevo_hwmon_reboot_notifier);
 	sysfs_remove_group(&clevo_hwmon->dev->kobj, &hwmon_default_attrgroup);
 	hwmon_device_unregister(clevo_hwmon->dev);
 	kfree(clevo_hwmon);
