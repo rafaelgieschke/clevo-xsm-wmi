@@ -1468,6 +1468,14 @@ static int __init clevo_xsm_dmi_matched(const struct dmi_system_id *id)
 
 static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
+		.ident = "Velocity P870TM",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "P870TM_TM1"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_with_extra_ops,
+	},
+	{
 		.ident = "Clevo P870DM",
 		.matches = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "P870DM"),
