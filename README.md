@@ -70,8 +70,8 @@ Arch Linux: [Module](https://aur.archlinux.org/packages/clevo-xsm-wmi/) [DKMS](h
 
 This is a common issue on Ubuntu as the module isn't signed so manual install is required.
 ```bash
-$ sudo install -m644 clevo-xsm-wmi.ko /lib/modules/$(uname -r)/extra
-$ sudo depmod
+$ sudo install -m644 clevo-xsm-wmi.ko /lib/modules/$(uname -r)/kernel/lib/
+$ sudo depmod -a
 ```
 * Module installed but not loaded during boot.
 
