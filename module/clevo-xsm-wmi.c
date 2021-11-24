@@ -43,6 +43,7 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 
+
 #define __CLEVO_XSM_PR(lvl, fmt, ...) do { pr_##lvl(fmt, ##__VA_ARGS__); } \
 		while (0)
 #define CLEVO_XSM_INFO(fmt, ...) __CLEVO_XSM_PR(info, fmt, ##__VA_ARGS__)
@@ -433,7 +434,7 @@ static int clevo_xsm_wmi_evaluate_wmbb_method(u32 method_id, u32 arg,
 
 	CLEVO_XSM_DEBUG("%0#4x  IN : %0#6x\n", method_id, arg);
 
-	status = wmi_evaluate_method(CLEVO_GET_GUID, 0x01,
+	status = wmi_evaluate_method(CLEVO_GET_GUID, 0x00,
 		method_id, &in, &out);
 
 	if (unlikely(ACPI_FAILURE(status)))
@@ -1249,7 +1250,7 @@ clevo_hwmon_show_fan_label(struct device *dev, struct device_attribute *attr,
 {
 	switch (to_sensor_dev_attr(attr)->index) {
 	case 0:
-		return sprintf(buf, "CPU fan\n");
+		return sprintf(buf, "GPU fan\n");
 	case 1:
 		return sprintf(buf, "GPU fan\n");
 	}
@@ -1335,7 +1336,7 @@ static ssize_t
 clevo_hwmon_show_temp1_label(struct device *dev, struct device_attribute *attr,
 				 char *buf)
 {
-	return sprintf(buf, "CPU temperature\n");
+	return sprintf(buf, "GPU temperature\n");
 }
 
 #ifdef EXPERIMENTAL
@@ -1468,9 +1469,33 @@ static int __init clevo_xsm_dmi_matched(const struct dmi_system_id *id)
 
 static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 	{
+		.ident = "Velocity PC5x_7xHP_HR_HS",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "PC5x_7xHP_HR_HS"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_with_extra_ops,
+	},
+	{
+		.ident = "Velocity P870TM",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "P870TM_TM1"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_with_extra_ops,
+	},	
+	{
 		.ident = "Clevo P870DM",
 		.matches = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "P870DM"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_with_extra_ops,
+	},
+	{
+		.ident = "Velocity P7xxTM",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "P7xxTM1"),
 		},
 		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_full_color_with_extra_ops,
@@ -1596,6 +1621,14 @@ static struct dmi_system_id clevo_xsm_dmi_table[] __initdata = {
 		},
 		.callback = clevo_xsm_dmi_matched,
 		.driver_data = &kb_8_color_ops,
+	},
+	{
+		.ident = "Clevo P950HP6",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "P95_HP,HR,HQ"),
+		},
+		.callback = clevo_xsm_dmi_matched,
+		.driver_data = &kb_full_color_ops,
 	},
 	{
 		/* terminating NULL entry */
