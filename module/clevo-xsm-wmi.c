@@ -950,7 +950,7 @@ static int clevo_xsm_wmi_resume(struct platform_device *dev)
 }
 
 static struct platform_driver clevo_xsm_platform_driver = {
-	.remove = clevo_xsm_wmi_remove,
+	.remove = (void *) clevo_xsm_wmi_remove,
 	.resume = clevo_xsm_wmi_resume,
 	.driver = {
 		.name  = CLEVO_XSM_DRIVER_NAME,
