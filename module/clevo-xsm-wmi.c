@@ -918,7 +918,7 @@ static int clevo_xsm_wmi_probe(struct platform_device *dev)
 	int status;
 
 	status = wmi_install_notify_handler(CLEVO_EVENT_GUID,
-		clevo_xsm_wmi_notify, NULL);
+		(void *) clevo_xsm_wmi_notify, NULL);
 	if (unlikely(ACPI_FAILURE(status))) {
 		CLEVO_XSM_ERROR("Could not register WMI notify handler (%0#6x)\n",
 			status);
